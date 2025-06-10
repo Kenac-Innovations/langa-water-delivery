@@ -1,0 +1,49 @@
+name: Build and Deploy Take U Backend App
+
+on:
+  push:
+    branches:
+      - dev-01
+
+jobs:
+  build_and_deploy:
+    runs-on: self-hosted
+    
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v3
+    
+    - name: Set up Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+    
+    - name: Build Spring Boot App
+      run: |
+        echo "Building the project..."
+        mvn clean package -DskipTests
+    
+    - name: Deploy JAR and Restart Service
+      run: |
+        # Store password in a file to avoid exposing it in process list
+        echo "$SUDO_PASS" > /tmp/sudo_pass
+        chmod 600 /tmp/sudo_pass
+        
+        echo "Copying JAR to /opt/take-u-backend"
+        cat /tmp/sudo_pass | sudo -S mkdir -p /opt/take-u-backend
+        cat /tmp/sudo_pass | sudo -S cp target/*.jar /opt/take-u-backend/take-u-backend-0.0.1-SNAPSHOT.jar
+        
+        echo "Restarting service directly"
+        cat /tmp/sudo_pass | sudo -S systemctl restart take-u-backend.service
+        
+        # Clean up the password file
+        rm /tmp/sudo_pass
+      env:
+        SUDO_PASS: ${{ secrets.SUDO_PASS }}
+    
+    - name: Check service status
+      run: |
+        echo "$SUDO_PASS" | sudo -S systemctl status take-u-backend.service --no-pager || true
+      env:
+        SUDO_PASS: ${{ secrets.SUDO_PASS }}

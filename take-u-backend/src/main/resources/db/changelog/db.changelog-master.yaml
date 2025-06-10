@@ -1,0 +1,7 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/2025/04/01-init-schema.sql
+  - include:
+      file: db/changelog/2025/04/02-init-indexes.sql
+  - include:
+      file: db/changelog/2025/04/03-init-data.sql

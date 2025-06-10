@@ -1,0 +1,20 @@
+CREATE TABLE active_devices (
+    entity_id BIGINT NOT NULL AUTO_INCREMENT,
+    device_name VARCHAR(255),
+    device_platform VARCHAR(255),
+    last_active_time TIMESTAMP,
+    push_notification_token VARCHAR(255),
+    user_id BIGINT,
+    driver_id BIGINT,
+    active BOOLEAN DEFAULT TRUE,
+    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(255),
+    modified_date TIMESTAMP,
+    modified_by VARCHAR(255),
+    PRIMARY KEY (entity_id),
+    INDEX idx_device_id (device_id),
+    INDEX idx_user_id (user_id),
+    INDEX idx_driver_id (driver_id),
+    CONSTRAINT fk_device_user FOREIGN KEY (user_id) REFERENCES users (entity_id),
+    CONSTRAINT fk_device_driver FOREIGN KEY (driver_id) REFERENCES ms_driver (entity_id)
+);

@@ -1,0 +1,107 @@
+spring:
+  config:
+    import: "optional:file:.env[.properties]"
+  application:
+    name: ${APP_NAME}
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: ${DB_USER}
+    password: ${DB_PASS}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+  liquibase:
+    change-log: classpath:/db/changelog/db.changelog-master.yaml
+    enabled: false
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USER}
+    password: ${MAIL_PASS}
+    properties:
+      # mail.smtp.auth: ${AUTH_TRUE}
+      mail.smtp.auth: true
+      # mail.smtp.starttls.enable: ${AUTH_TLS}
+      mail.smtp.starttls.enable: true
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 110MB
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
+
+custom:
+  base:
+    path: /api/v1
+  security:
+    jwt:
+      secret: EERUR38RIEFBEYFT30938T303TBF8R30R3REF9F37yreyr634rb7fr3rbd6gf3ru90rgegr3489r3buyfg33fo3f839fuy3fvf6gfdfdfg73fvefd78ff3rf3fgf3r
+      expiration: 7760000
+      refresh-expiration: 604800000
+
+server:
+  port: ${APP_PORT}
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+
+minio:
+  # Legacy configuration (will be mapped to primary)
+  endpoint: http://${HOST}:9000
+  accessKey: JOYIaxzHzCAqcrWPHJgO
+  secretKey: fWg32YYKEVJPIew01pIRNaw9TYJho9TB6oFGBnYE
+  region: us-east-1
+  # Legacy buckets (will be used with primary server)
+  buckets:
+    drivers-license-images: drivers-license-images
+    national-id-images: national-id-images
+    pickup-images: pickup-images
+    profile-photos: profile-photos
+    vehicle-documents: vehicle-documents
+  
+  # New multi-server configuration
+  primary:
+    endpoint: http://${HOST}:9000
+    accessKey: JOYIaxzHzCAqcrWPHJgO
+    secretKey: fWg32YYKEVJPIew01pIRNaw9TYJho9TB6oFGBnYE
+    region: us-east-1
+  secondary:
+    endpoint: http://${SECONDARY_HOST}:9000
+    accessKey: JOYIaxzHzCAqcrWPHJgO
+    secretKey: fWg32YYKEVJPIew01pIRNaw9TYJho9TB6oFGBnYE
+    region: us-east-1
+  
+  # Server-specific bucket configurations
+  servers:
+    primary:
+      drivers-license-images: drivers-license-images
+      national-id-images: national-id-images
+      pickup-images: pickup-images
+      profile-photos: profile-photos
+    secondary:
+      archive-images: archive-images
+      backup-images: backup-images
+
+
+app:
+  logo-url: https://kenac.co.zw/img/kenaclogo.png
+  config:
+    driver-proposals-limit: 0
+
+paynow:
+#  integration-key: b899e8fd-1c9d-460c-b6b4-e0349eaf92b9
+  integration-key: 788476bb-fcc1-4291-bd25-5f09e8f9af9e
+#  integration-id: 20899
+  integration-id: 20900
+#  callbackUrl: https://fd4a-77-246-55-171.ngrok-free.app/api/v1/payments/paynow/callback
+  callbackUrl: http://41.174.125.165:4027/api/v1/payments/paynow/callback
+  returnUrl: https://www.google.com/
