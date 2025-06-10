@@ -61,6 +61,7 @@ user_app/firebase_app_id_file.json
 # Secrets
 user_app/.env
 user_app/**/secrets/**
+take-u-backend/takeu-dev-firebase.json
 
 # Miscellaneous
 user_app/pubspec.lock
