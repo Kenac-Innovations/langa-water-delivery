@@ -10,6 +10,7 @@ import 'package:langas_user/bloc/auth/login_bloc/login_bloc_bloc.dart';
 import 'package:langas_user/bloc/auth/login_bloc/login_bloc_event.dart';
 import 'package:langas_user/bloc/auth/login_bloc/login_bloc_state.dart';
 import 'package:langas_user/dto/auth_dto.dart';
+import 'package:langas_user/flutter_flow/flutter_flow_theme.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -159,7 +160,7 @@ class _LoginScreenState extends State<LoginScreen>
                       children: [
                         const SizedBox(height: 80),
                         Image.asset(
-                          'assets/images/logo2.png',
+                          'assets/images/logo.png',
                           height: 150,
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) {
@@ -167,13 +168,15 @@ class _LoginScreenState extends State<LoginScreen>
                               height: 150,
                               width: 150,
                               decoration: BoxDecoration(
-                                color: const Color(0xFF2451DC).withOpacity(0.1),
+                                color: FlutterFlowTheme.of(context)
+                                    .primary
+                                    .withOpacity(0.1),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.shield_outlined,
                                 size: 80,
-                                color: Color(0xFF2451DC),
+                                color: FlutterFlowTheme.of(context).primary,
                               ),
                             );
                           },
@@ -190,7 +193,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   height: 50,
                                   decoration: BoxDecoration(
                                     color: _tabController.index == 0
-                                        ? const Color(0xFF0A1C40)
+                                        ? FlutterFlowTheme.of(context).primary
                                         : Colors.grey.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
@@ -219,7 +222,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   height: 50,
                                   decoration: BoxDecoration(
                                     color: _tabController.index == 1
-                                        ? const Color(0xFF0A1C40)
+                                        ? FlutterFlowTheme.of(context).primary
                                         : Colors.grey.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
@@ -261,7 +264,8 @@ class _LoginScreenState extends State<LoginScreen>
                               context.pushNamed('ForgotPasswordRequestScreen');
                             },
                             style: TextButton.styleFrom(
-                              foregroundColor: const Color(0xFF2451DC),
+                              foregroundColor:
+                                  FlutterFlowTheme.of(context).primary,
                             ),
                             child: const Text(
                               "Forgot Password?",
@@ -279,7 +283,8 @@ class _LoginScreenState extends State<LoginScreen>
                           child: ElevatedButton(
                             onPressed: _isLoading ? null : _dispatchLoginEvent,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF0A1C40),
+                              backgroundColor:
+                                  FlutterFlowTheme.of(context).primary,
                               foregroundColor: Colors.white,
                               disabledBackgroundColor: Colors.grey,
                               elevation: 0,
@@ -311,7 +316,7 @@ class _LoginScreenState extends State<LoginScreen>
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             const Text(
-                              "New to TakeU? ",
+                              "New to Langa's? ",
                               style: TextStyle(
                                 fontFamily: 'Poppins',
                                 color: Colors.grey,
@@ -321,11 +326,11 @@ class _LoginScreenState extends State<LoginScreen>
                               onTap: () {
                                 context.pushNamed('SignUpScreen');
                               },
-                              child: const Text(
+                              child: Text(
                                 "Create Account",
                                 style: TextStyle(
                                   fontFamily: 'Poppins',
-                                  color: Color(0xFF2451DC),
+                                  color: FlutterFlowTheme.of(context).primary,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
