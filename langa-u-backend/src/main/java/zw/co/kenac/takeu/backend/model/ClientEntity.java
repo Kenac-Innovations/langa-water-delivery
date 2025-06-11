@@ -31,6 +31,10 @@ public class ClientEntity extends AbstractEntity {
     private String emailAddress;
     @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ClientAddressesEntity> clientAddresses;
+    
+    @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ClientSecurityAnswerEntity> securityAnswers;
+    
     @Enumerated(EnumType.STRING)
     private ClientStatus status = ClientStatus.ACTIVE;
 

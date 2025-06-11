@@ -26,4 +26,5 @@ public class ClientRegisterRequestDto {
 
     private String password;
     private String otp;
+    private List<SecurityAnswerDto> securityAnswers;
 }

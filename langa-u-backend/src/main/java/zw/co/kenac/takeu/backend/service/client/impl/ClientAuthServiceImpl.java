@@ -19,14 +19,23 @@ import zw.co.kenac.takeu.backend.repository.*;
 import zw.co.kenac.takeu.backend.security.UserPrincipal;
 import zw.co.kenac.takeu.backend.security.provider.JwtTokenProvider;
 import zw.co.kenac.takeu.backend.service.client.ClientAuthService;
+import zw.co.kenac.takeu.backend.repository.ClientSecurityAnswerRepository;
+import zw.co.kenac.takeu.backend.repository.SecurityQuestionsRepository;
+import zw.co.kenac.takeu.backend.model.ClientSecurityAnswerEntity;
+import zw.co.kenac.takeu.backend.model.SecurityQuestionsEntity;
+import zw.co.kenac.takeu.backend.sms.SmsService;
+import zw.co.kenac.takeu.backend.mailer.dto.EmailGenericDto;
 
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
+import java.util.stream.Collectors;
+import java.util.UUID;
 
 import static zw.co.kenac.takeu.backend.constant.AppConstant.NOT_FOUND;
 import static zw.co.kenac.takeu.backend.security.constant.SecurityConstant.USER_MISSING;
@@ -44,6 +53,9 @@ public class ClientAuthServiceImpl implements ClientAuthService {
     private final JavaMailService mailService;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final OtpVerificationRepository otpVerificationRepository;
+    private final ClientSecurityAnswerRepository clientSecurityAnswerRepository;
+    private final SecurityQuestionsRepository securityQuestionsRepository;
+    private final SmsService smsService;
 
     @Override
     public ClientLoginResponse login(LoginRequest loginRequest) {
@@ -161,7 +173,23 @@ public class ClientAuthServiceImpl implements ClientAuthService {
         ClientEntity clientEntity = clientRepository.save(client);
         user.setCustomer(clientEntity);
 
-       // generateOtp(user);
+        // Save security answers
+        if (requestDto.getSecurityAnswers() != null && !requestDto.getSecurityAnswers().isEmpty()) {
+            List<ClientSecurityAnswerEntity> securityAnswers = requestDto.getSecurityAnswers().stream()
+                    .map(answerDto -> {
+                        SecurityQuestionsEntity question = securityQuestionsRepository.findById(answerDto.getQuestionId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Security question not found with id: " + answerDto.getQuestionId()));
+                        
+                        return ClientSecurityAnswerEntity.builder()
+                                .client(clientEntity)
+                                .securityQuestion(question)
+                                .answer(answerDto.getAnswer())
+                                .build();
+                    })
+                    .collect(Collectors.toList());
+            
+            clientSecurityAnswerRepository.saveAll(securityAnswers);
+        }
 
         UserPrincipal userPrincipal = new UserPrincipal(user);
         String accessToken = getAccessToken(userPrincipal);
@@ -273,35 +301,133 @@ public class ClientAuthServiceImpl implements ClientAuthService {
 
     @Override
     public String resetPassword(PasswordResetRequest request) {
-        if (request.token() == null || request.token().isBlank()) {
-            throw new IllegalArgumentException("Reset token is required");
+        return null;
+    }
+
+    @Override
+    public String requestPasswordResetOtp(PasswordResetOtpRequest request) {
+        UserEntity user = userRepository.findByEmailAddressOrMobileNumberAndRole(request.getEmail(), "CLIENT")
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + request.getEmail()));
+
+        String otp = new Random().ints(100000, 999999)
+                .findFirst()
+                .getAsInt() + "";
+
+        OtpVerification otpVerification = otpVerificationRepository.findByUser(user).orElse(new OtpVerification());
+        otpVerification.setOtp(otp);
+        otpVerification.setUser(user);
+        otpVerification.setExpiryDate(LocalDateTime.now().plusMinutes(15));
+        otpVerification.setVerified(false);
+        otpVerificationRepository.save(otpVerification);
+
+        // Assuming a mail service exists to send the OTP
+        mailService.sendPasswordResetEmail(user.getEmailAddress(), user.getFirstname(), otp,"");
+
+        return "An OTP has been sent to your email address.";
+    }
+
+    @Override
+    public List<SecurityQuestionDto> verifyPasswordResetOtp(PasswordResetOtpVerifyRequest request) {
+        UserEntity user = userRepository.findByEmailAddressOrMobileNumberAndRole(request.getEmail(), "CLIENT")
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + request.getEmail()));
+
+        OtpVerification otpVerification = otpVerificationRepository.findByUserAndOtp(user, request.getOtp())
+                .orElseThrow(() -> new ResourceNotFoundException("Invalid or expired OTP."));
+
+        if (otpVerification.getExpiryDate().isBefore(LocalDateTime.now())) {
+            otpVerification.setExpired(true);
+            otpVerificationRepository.save(otpVerification);
+            throw new RuntimeException("OTP has expired. Please request a new one.");
         }
 
-        if (request.newPassword() == null || request.newPassword().isBlank()) {
-            throw new IllegalArgumentException("New password is required");
+        if (otpVerification.getVerified()) {
+            throw new RuntimeException("This OTP has already been used.");
         }
 
-        // Find token in the database
-        PasswordResetToken passwordResetToken = passwordResetTokenRepository.findByToken(request.token())
-                .orElseThrow(() -> new ResourceNotFoundException("Invalid or expired reset token"));
+        otpVerification.setVerified(true);
+        otpVerificationRepository.save(otpVerification);
 
-        // Check if token is valid
-        if (!passwordResetToken.isValid()) {
-            throw new RuntimeException("Reset token has expired or already been used");
+        // Fetch 2 random security questions for the user
+        List<ClientSecurityAnswerEntity> clientAnswers = clientSecurityAnswerRepository.findByClient(user.getCustomer());
+        if (clientAnswers == null || clientAnswers.size() < 2) {
+            throw new RuntimeException("Not enough security questions configured for this account.");
         }
 
-        // Get user from token
-        UserEntity user = passwordResetToken.getUser();
+        Collections.shuffle(clientAnswers);
 
-        // Update password
-        user.setUserPassword(passwordEncoder.encode(request.newPassword()));
-        userRepository.save(user);
+        return clientAnswers.stream()
+                .limit(2)
+                .map(answer -> new SecurityQuestionDto(answer.getSecurityQuestion().getEntityId(), answer.getSecurityQuestion().getQuestion()))
+                .collect(Collectors.toList());
+    }
 
-        // Mark token as used
-        passwordResetToken.setUsed(true);
+    @Override
+    public String verifySecurityAnswers(SecurityChallengeRequest request) {
+        UserEntity user = userRepository.findByEmailAddressOrMobileNumberAndRole(request.getEmail(), "CLIENT")
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + request.getEmail()));
+
+        if (request.getAnswers() == null || request.getAnswers().size() < 2) {
+            throw new IllegalArgumentException("Two security answers are required.");
+        }
+
+        List<ClientSecurityAnswerEntity> storedAnswers = clientSecurityAnswerRepository.findByClient(user.getCustomer());
+        if (storedAnswers == null || storedAnswers.isEmpty()) {
+            throw new RuntimeException("No security questions found for this user.");
+        }
+
+        long correctAnswers = request.getAnswers().stream()
+                .filter(submittedAnswer -> storedAnswers.stream()
+                        .anyMatch(storedAnswer ->
+                                storedAnswer.getSecurityQuestion().getEntityId().equals(submittedAnswer.getQuestionId()) &&
+                                        passwordEncoder.matches(
+                                                submittedAnswer.getAnswer().trim().toLowerCase(),
+                                                storedAnswer.getAnswer()
+                                        )
+                        )
+                ).count();
+
+        if (correctAnswers != request.getAnswers().size()) {
+            throw new RuntimeException("One or more security answers are incorrect.");
+        }
+        
+        // Invalidate any existing tokens for this user
+        passwordResetTokenRepository.findByUserAndUsedFalse(user).ifPresent(token -> {
+            token.setUsed(true);
+            passwordResetTokenRepository.save(token);
+        });
+
+        // Generate a new single-use token for the final password reset step
+        String token = UUID.randomUUID().toString();
+        PasswordResetToken passwordResetToken = new PasswordResetToken();
+        passwordResetToken.setToken(token);
+        passwordResetToken.setUser(user);
+        passwordResetToken.setExpiryDate(LocalDateTime.now().plusMinutes(10)); // Token valid for 10 minutes
         passwordResetTokenRepository.save(passwordResetToken);
 
-        return "Your password has been reset successfully. You can now login with your new password.";
+        return token;
+    }
+
+    @Override
+    public String resetPasswordWithToken(NewPasswordRequest request) {
+        PasswordResetToken passwordResetToken = passwordResetTokenRepository.findByToken(request.getToken())
+                .orElseThrow(() -> new ResourceNotFoundException("Invalid or expired password reset token."));
+
+        if (!passwordResetToken.isValid()) {
+            throw new RuntimeException("Token has expired or has already been used.");
+        }
+
+        UserEntity user = passwordResetToken.getUser();
+        user.setUserPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setPasswordChangedAt(LocalDateTime.now());
+        userRepository.save(user);
+
+        passwordResetToken.setUsed(true);
+        passwordResetTokenRepository.save(passwordResetToken);
+        
+        // Send confirmation email
+      //  mailService.sendPasswordResetEmail(user.getEmailAddress(), user.getFirstname(), resetCode, "");
+
+        return "Password has been reset successfully.";
     }
 
     private void authenticate(String username, String password) {

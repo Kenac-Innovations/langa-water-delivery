@@ -54,4 +54,6 @@ public class UserEntity extends AbstractEntity {
 
     @OneToOne(mappedBy = "user")
     private OtpVerification verification;
+
+    private LocalDateTime passwordChangedAt;
 }

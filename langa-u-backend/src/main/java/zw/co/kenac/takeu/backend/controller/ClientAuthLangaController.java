@@ -12,8 +12,12 @@ import zw.co.kenac.takeu.backend.dto.GenericResponse;
 import zw.co.kenac.takeu.backend.dto.auth.LoginRequest;
 import zw.co.kenac.takeu.backend.dto.auth.client.ClientLoginResponse;
 import zw.co.kenac.takeu.backend.dto.auth.client.ClientRegisterRequestDto;
+import zw.co.kenac.takeu.backend.dto.auth.client.NewPasswordRequest;
 import zw.co.kenac.takeu.backend.dto.auth.client.OtpRequest;
 import zw.co.kenac.takeu.backend.dto.auth.client.OtpVerificationDto;
+import zw.co.kenac.takeu.backend.dto.auth.client.PasswordResetOtpRequest;
+import zw.co.kenac.takeu.backend.dto.auth.client.PasswordResetOtpVerifyRequest;
+import zw.co.kenac.takeu.backend.dto.auth.client.SecurityChallengeRequest;
 import zw.co.kenac.takeu.backend.service.client.ClientAuthService;
 
 import static zw.co.kenac.takeu.backend.dto.GenericResponse.success;
@@ -51,5 +55,25 @@ public class ClientAuthLangaController {
     public ResponseEntity<GenericResponse<ClientLoginResponse>> login(@RequestBody LoginRequest loginRequest) {
         ClientLoginResponse response = clientAuthService.login(loginRequest);
         return ResponseEntity.ok(GenericResponse.success(response));
+    }
+
+    @PostMapping("/password/request-reset-otp")
+    public ResponseEntity<?> requestPasswordResetOtp(@RequestBody PasswordResetOtpRequest request) {
+        return ResponseEntity.ok(clientAuthService.requestPasswordResetOtp(request));
+    }
+
+    @PostMapping("/password/verify-reset-otp")
+    public ResponseEntity<?> verifyPasswordResetOtp(@RequestBody PasswordResetOtpVerifyRequest request) {
+        return ResponseEntity.ok(clientAuthService.verifyPasswordResetOtp(request));
+    }
+
+    @PostMapping("/password/verify-security-answers")
+    public ResponseEntity<?> verifySecurityAnswers(@RequestBody SecurityChallengeRequest request) {
+        return ResponseEntity.ok(clientAuthService.verifySecurityAnswers(request));
+    }
+
+    @PostMapping("/password/reset-with-token")
+    public ResponseEntity<?> resetPasswordWithToken(@RequestBody NewPasswordRequest request) {
+        return ResponseEntity.ok(clientAuthService.resetPasswordWithToken(request));
     }
 }

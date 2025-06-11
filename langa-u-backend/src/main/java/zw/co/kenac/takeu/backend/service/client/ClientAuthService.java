@@ -3,6 +3,8 @@ package zw.co.kenac.takeu.backend.service.client;
 import zw.co.kenac.takeu.backend.dto.auth.*;
 import zw.co.kenac.takeu.backend.dto.auth.client.*;
 
+import java.util.List;
+
 /**
  * @author : Jaison.Chipuka
  * @email : jaisonc@kenac.co.zw
@@ -25,4 +27,10 @@ public interface ClientAuthService {
     String resetPassword(PasswordResetRequest request);
 
     void requestOtp(OtpRequest otpRequest);
+
+    // New Password Reset Flow
+    String requestPasswordResetOtp(PasswordResetOtpRequest request);
+    List<SecurityQuestionDto> verifyPasswordResetOtp(PasswordResetOtpVerifyRequest request);
+    String verifySecurityAnswers(SecurityChallengeRequest request);
+    String resetPasswordWithToken(NewPasswordRequest request);
 }
