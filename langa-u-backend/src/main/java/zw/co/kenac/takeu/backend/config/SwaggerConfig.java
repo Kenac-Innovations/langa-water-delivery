@@ -17,8 +17,8 @@ public class SwaggerConfig {
         final String securitySchemeName = "bearerAuth";
         return new OpenAPI()
                 .info(new Info()
-                        .title("Take-U API")
-                        .description("Take-U Backend API Documentation")
+                        .title("LANGA'S API")
+                        .description("LANGA'S Backend API Documentation")
                         .version("v1.0.0")
                         .license(new License().name("Apache 2.0").url("http://springdoc.org")))
                 .addSecurityItem(new SecurityRequirement()

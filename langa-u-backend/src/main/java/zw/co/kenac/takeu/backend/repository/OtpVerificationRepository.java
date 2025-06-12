@@ -20,7 +20,7 @@ public interface OtpVerificationRepository extends JpaRepository<OtpVerification
     Optional<OtpVerification> findByUserAndOtp(UserEntity user, String otp);
     Optional<OtpVerification> findByUser(UserEntity user);
 
-    @Query("SELECT o FROM OtpVerification o WHERE (o.email = :loginId OR o.phoneNumber = :loginId )AND o.otp = :otp")
+    @Query("SELECT o FROM OtpVerification o WHERE (o.email = :loginId OR o.phoneNumber = :loginId) AND o.otp = :otp")
     Optional<OtpVerification> findByOtpAndLoginId(@Param("loginId") String loginId, @Param("otp") String otp);
 
 }

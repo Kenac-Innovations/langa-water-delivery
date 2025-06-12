@@ -3,6 +3,7 @@ package zw.co.kenac.takeu.backend.model;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import zw.co.kenac.takeu.backend.model.embedded.DropOffLocation;
@@ -21,6 +22,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "ms_deliveries")
+@SuperBuilder
 public class DeliveryEntity extends AbstractEntity {
 
     @Column(precision = 30, scale = 4)

@@ -35,7 +35,7 @@ public class SecurityConstant {
             "/api/v1/auth/login",
             "/api/v1/payments/paynow/callback",
             "/api/v1/auth2/**",
-            "/api/v2/auth/**",
+            "/api/v2/**",
     };
 
 }

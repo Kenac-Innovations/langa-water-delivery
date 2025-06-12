@@ -1,13 +1,16 @@
 package zw.co.kenac.takeu.backend.service.client.impl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import zw.co.kenac.takeu.backend.dto.auth.LoginRequest;
 import zw.co.kenac.takeu.backend.dto.auth.PasswordLinkRequest;
+import zw.co.kenac.takeu.backend.walletmodule.utils.JsonUtil;
 import zw.co.kenac.takeu.backend.dto.auth.PasswordResetRequest;
 import zw.co.kenac.takeu.backend.dto.auth.VerifyAccountRequest;
 import zw.co.kenac.takeu.backend.dto.auth.client.*;
@@ -25,6 +28,7 @@ import zw.co.kenac.takeu.backend.model.ClientSecurityAnswerEntity;
 import zw.co.kenac.takeu.backend.model.SecurityQuestionsEntity;
 import zw.co.kenac.takeu.backend.sms.SmsService;
 import zw.co.kenac.takeu.backend.mailer.dto.EmailGenericDto;
+import zw.co.kenac.takeu.backend.walletmodule.utils.JsonUtil;
 
 import java.math.BigDecimal;
 import java.security.SecureRandom;
@@ -36,12 +40,15 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.UUID;
+import java.util.Map;
 
 import static zw.co.kenac.takeu.backend.constant.AppConstant.NOT_FOUND;
 import static zw.co.kenac.takeu.backend.security.constant.SecurityConstant.USER_MISSING;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
+@Transactional
 public class ClientAuthServiceImpl implements ClientAuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -363,37 +370,70 @@ public class ClientAuthServiceImpl implements ClientAuthService {
 
     @Override
     public String verifySecurityAnswers(SecurityChallengeRequest request) {
+        // Find user by email
         UserEntity user = userRepository.findByEmailAddressOrMobileNumberAndRole(request.getEmail(), "CLIENT")
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + request.getEmail()));
 
+        // Validate request has required answers
         if (request.getAnswers() == null || request.getAnswers().size() < 2) {
             throw new IllegalArgumentException("Two security answers are required.");
         }
 
+        // Get stored security answers for the user
         List<ClientSecurityAnswerEntity> storedAnswers = clientSecurityAnswerRepository.findByClient(user.getCustomer());
         if (storedAnswers == null || storedAnswers.isEmpty()) {
             throw new RuntimeException("No security questions found for this user.");
         }
 
-        long correctAnswers = request.getAnswers().stream()
-                .filter(submittedAnswer -> storedAnswers.stream()
-                        .anyMatch(storedAnswer ->
-                                storedAnswer.getSecurityQuestion().getEntityId().equals(submittedAnswer.getQuestionId()) &&
-                                        passwordEncoder.matches(
-                                                submittedAnswer.getAnswer().trim().toLowerCase(),
-                                                storedAnswer.getAnswer()
-                                        )
-                        )
-                ).count();
+        // Create a map of question IDs to stored answers for efficient lookup
+        Map<Long, String> storedAnswersMap = storedAnswers.stream()
+                .collect(Collectors.toMap(
+                        answer -> answer.getSecurityQuestion().getEntityId(),
+                        ClientSecurityAnswerEntity::getAnswer
+                ));
 
-        if (correctAnswers != request.getAnswers().size()) {
+        log.info("======> Stored answers map: {}", storedAnswersMap);
+        log.info("======> Number of submitted answers: {}", request.getAnswers().size());
+
+        // Log submitted answers for debugging
+        request.getAnswers().forEach(submittedAnswer -> {
+            log.info("======> Submitted - Question ID: {}, Answer: '{}'",
+                    submittedAnswer.getQuestionId(), submittedAnswer.getAnswer());
+        });
+
+        // Verify each submitted answer
+        boolean allAnswersCorrect = request.getAnswers().stream()
+                .allMatch(submittedAnswer -> {
+                    String storedAnswer = storedAnswersMap.get(submittedAnswer.getQuestionId());
+
+                    if (storedAnswer == null) {
+                        log.warn("======> No stored answer found for question ID: {}", submittedAnswer.getQuestionId());
+                        return false;
+                    }
+
+                    // Normalize both answers for comparison (trim whitespace and convert to lowercase)
+                    String normalizedSubmitted = submittedAnswer.getAnswer().trim().toLowerCase();
+                    String normalizedStored = storedAnswer.trim().toLowerCase();
+
+                    boolean matches = normalizedStored.equals(normalizedSubmitted);
+
+                    log.info("======> Question ID: {}, Stored: '{}', Submitted: '{}', Matches: {}",
+                            submittedAnswer.getQuestionId(), normalizedStored, normalizedSubmitted, matches);
+
+                    return matches;
+                });
+
+        if (!allAnswersCorrect) {
             throw new RuntimeException("One or more security answers are incorrect.");
         }
-        
+
+        log.info("======> All security answers verified successfully for user: {}", request.getEmail());
+
         // Invalidate any existing tokens for this user
         passwordResetTokenRepository.findByUserAndUsedFalse(user).ifPresent(token -> {
             token.setUsed(true);
             passwordResetTokenRepository.save(token);
+            log.info("======> Invalidated existing password reset token for user: {}", request.getEmail());
         });
 
         // Generate a new single-use token for the final password reset step
@@ -401,8 +441,11 @@ public class ClientAuthServiceImpl implements ClientAuthService {
         PasswordResetToken passwordResetToken = new PasswordResetToken();
         passwordResetToken.setToken(token);
         passwordResetToken.setUser(user);
-        passwordResetToken.setExpiryDate(LocalDateTime.now().plusMinutes(10)); // Token valid for 10 minutes
+        passwordResetToken.setExpiryDate(LocalDateTime.now().plusMinutes(15));
+        passwordResetToken.setUsed(false);
         passwordResetTokenRepository.save(passwordResetToken);
+
+        log.info("======> Generated new password reset token for user: {}", request.getEmail());
 
         return token;
     }

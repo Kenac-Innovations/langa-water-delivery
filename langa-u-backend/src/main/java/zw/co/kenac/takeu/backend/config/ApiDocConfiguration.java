@@ -25,8 +25,8 @@ public class ApiDocConfiguration {
     @Bean
     public OpenAPI openAPI() {
         Contact contact = new Contact();
-        contact.setEmail("jaisonc@kenac.co.zw");
-        contact.setName("Jaison.Chipuka");
+        contact.setEmail("dyland@kenac.co.zw");
+        contact.setName("Dylan.Dzvene");
         contact.setUrl("https://kenac.co.zw");
 
         Server localServer = new Server();
@@ -44,10 +44,10 @@ public class ApiDocConfiguration {
         components.addSecuritySchemes("Bearer Authentication", createApiKeyScheme());
 
         Info info = new Info()
-                .title("Take U Backend API")
+                .title("LANGA's Backend API")
                 .contact(contact)
                 .version("1.0.0")
-                .description("Take-U API Documentation");
+                .description("Langa's API Documentation");
 
         return new OpenAPI()
                 .info(info)
@@ -61,6 +61,13 @@ public class ApiDocConfiguration {
         return GroupedOpenApi.builder()
                 .group("Driver API")
                 .pathsToMatch("/api/v1/driver/**")
+                .build();
+    }
+    @Bean
+    public GroupedOpenApi langaOpenAPI() {
+        return GroupedOpenApi.builder()
+                .group("Langa's API")
+                .pathsToMatch("/api/v2/**")
                 .build();
     }
 
