@@ -13,6 +13,7 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import zw.co.kenac.takeu.backend.model.base.AbstractEntity;
 
 
 import java.time.LocalDateTime;

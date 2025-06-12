@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import zw.co.kenac.takeu.backend.model.base.AbstractEntity;
 import zw.co.kenac.takeu.backend.model.enumeration.ClientStatus;
 import zw.co.kenac.takeu.backend.model.enumeration.CommChannels;
 
@@ -21,6 +22,7 @@ public class ClientEntity extends AbstractEntity {
     private String middleName;
 
     private String lastname;
+    private Boolean isCreditAllowed;
 
     private String mobileNumber;
     @ElementCollection(targetClass = CommChannels.class)

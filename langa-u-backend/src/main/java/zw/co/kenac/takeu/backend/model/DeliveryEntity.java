@@ -3,9 +3,9 @@ package zw.co.kenac.takeu.backend.model;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
-import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import zw.co.kenac.takeu.backend.model.base.AbstractEntity;
 import zw.co.kenac.takeu.backend.model.embedded.DropOffLocation;
 import zw.co.kenac.takeu.backend.model.embedded.PickupLocation;
 import zw.co.kenac.takeu.backend.walletmodule.models.Transaction;
@@ -13,7 +13,6 @@ import zw.co.kenac.takeu.backend.walletmodule.models.Transaction;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.List;
 
 @Entity
 @Builder

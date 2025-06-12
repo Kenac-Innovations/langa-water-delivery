@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import zw.co.kenac.takeu.backend.model.base.AbstractEntity;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;

@@ -3,6 +3,7 @@ package zw.co.kenac.takeu.backend.model;
 import jakarta.persistence.Entity;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import zw.co.kenac.takeu.backend.model.base.AbstractEntity;
 
 import java.util.List;
 

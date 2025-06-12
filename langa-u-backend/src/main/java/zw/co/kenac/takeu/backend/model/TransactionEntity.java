@@ -1,6 +1,7 @@
 package zw.co.kenac.takeu.backend.model;
 
 import jakarta.persistence.*;
+import zw.co.kenac.takeu.backend.model.base.AbstractEntity;
 
 import java.math.BigDecimal;
 

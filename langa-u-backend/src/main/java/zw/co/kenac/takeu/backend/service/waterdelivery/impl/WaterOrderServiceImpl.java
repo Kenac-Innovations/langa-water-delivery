@@ -22,6 +22,7 @@ import zw.co.kenac.takeu.backend.model.DeliveryEntity;
 import zw.co.kenac.takeu.backend.model.embedded.DropOffLocation;
 import zw.co.kenac.takeu.backend.model.embedded.ScheduledDetails;
 import zw.co.kenac.takeu.backend.model.enumeration.DeliveryStatus;
+import zw.co.kenac.takeu.backend.model.enumeration.PaymentType;
 import zw.co.kenac.takeu.backend.model.waterdelivery.Promotions;
 import zw.co.kenac.takeu.backend.model.waterdelivery.WaterDelivery;
 import zw.co.kenac.takeu.backend.model.waterdelivery.WaterOrder;
@@ -29,6 +30,7 @@ import zw.co.kenac.takeu.backend.model.enumeration.OrderStatus;
 import zw.co.kenac.takeu.backend.model.enumeration.PaymentStatus;
 import zw.co.kenac.takeu.backend.repository.*;
 import zw.co.kenac.takeu.backend.service.waterdelivery.WaterOrderService;
+import zw.co.kenac.takeu.backend.utils.HelpFunctions;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -59,6 +61,7 @@ public class WaterOrderServiceImpl implements WaterOrderService {
 
         WaterOrder order = new WaterOrder();
         order.setClient(client);
+        order.setPaymentType(request.getPaymentType());
         order.setOrderStatus(OrderStatus.CREATED);
         order.setPaymentStatus(PaymentStatus.PENDING);
         if (request.getPromoCode() != null) {
@@ -129,8 +132,14 @@ public class WaterOrderServiceImpl implements WaterOrderService {
         delivery.setPriceAmount(request.getPriceAmount());
         delivery.setAutoAssignDriver(request.getAutoAssignDriver());
         delivery.setIsScheduled(request.getIsScheduled());
+        delivery.setCompletionOtp(HelpFunctions.generateOtp());
         delivery.setDeliveryInstructions(request.getDeliveryInstructions());
-        delivery.setDeliveryStatus(DeliveryStatus.OPEN.name()); // Default status
+        if(order.getPaymentType().equals(PaymentType.CREDIT)||order.getPaymentType().equals(PaymentType.ON_DELIVERY)){
+            delivery.setDeliveryStatus(DeliveryStatus.OPEN.name()); // Default status
+        }else{
+            delivery.setDeliveryStatus(DeliveryStatus.CREATED.name()); // Default status
+        }
+
 
         if (request.getDropOffLocation() != null) {
             delivery.setDropOffLocation(mapDropOffLocation(request.getDropOffLocation(), order));

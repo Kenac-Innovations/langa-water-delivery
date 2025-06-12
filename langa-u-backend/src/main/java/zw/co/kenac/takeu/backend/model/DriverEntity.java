@@ -3,6 +3,7 @@ package zw.co.kenac.takeu.backend.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import zw.co.kenac.takeu.backend.model.base.AbstractEntity;
 import zw.co.kenac.takeu.backend.model.waterdelivery.WaterDelivery;
 import zw.co.kenac.takeu.backend.walletmodule.models.WalletAccount;
 

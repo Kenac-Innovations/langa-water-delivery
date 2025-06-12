@@ -11,5 +11,6 @@ public enum DeliveryStatus {
     PICKED_UP,
     ON_ROUTE,
     COMPLETED,
-    CANCELLED
+    CANCELLED,
+    CREATED
 }

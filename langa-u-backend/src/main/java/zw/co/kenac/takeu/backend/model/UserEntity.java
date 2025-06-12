@@ -3,6 +3,7 @@ package zw.co.kenac.takeu.backend.model;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import zw.co.kenac.takeu.backend.model.base.AbstractEntity;
 
 import java.time.LocalDateTime;
 

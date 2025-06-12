@@ -2,6 +2,7 @@ package zw.co.kenac.takeu.backend.dto.waterdelivery.request;
 
 import lombok.Builder;
 import lombok.Value;
+import zw.co.kenac.takeu.backend.model.enumeration.PaymentType;
 import zw.co.kenac.takeu.backend.model.waterdelivery.WaterOrder;
 import zw.co.kenac.takeu.backend.model.enumeration.OrderStatus;
 import zw.co.kenac.takeu.backend.model.enumeration.PaymentStatus;
@@ -21,6 +22,7 @@ public class WaterOrderCreateRequestDto implements Serializable {
     Long clientId;
     LocalDateTime createdDate;
     LocalDateTime lastModifiedDate;
+    PaymentType paymentType;
     String promoCode;
     OrderStatus orderStatus;
     List<WaterDeliveryCreateRequestDto> deliveries;

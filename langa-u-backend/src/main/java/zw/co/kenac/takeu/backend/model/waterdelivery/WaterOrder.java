@@ -6,7 +6,9 @@ import lombok.Setter;
 import zw.co.kenac.takeu.backend.model.ClientEntity;
 import zw.co.kenac.takeu.backend.model.base.BaseEntity;
 import zw.co.kenac.takeu.backend.model.enumeration.OrderStatus;
+import zw.co.kenac.takeu.backend.model.enumeration.PaymentMethod;
 import zw.co.kenac.takeu.backend.model.enumeration.PaymentStatus;
+import zw.co.kenac.takeu.backend.model.enumeration.PaymentType;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -23,7 +25,9 @@ public class WaterOrder extends BaseEntity {
     @JoinColumn(name = "client_id", nullable = false)
     private ClientEntity client;
 
-
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_type", nullable = true)
+    private PaymentType paymentType;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "order_status", nullable = false)
