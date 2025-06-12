@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import zw.co.kenac.takeu.backend.dto.GenericResponse;
+import zw.co.kenac.takeu.backend.dto.PaginatedResponse;
 import zw.co.kenac.takeu.backend.dto.waterdelivery.request.WaterOrderCreateRequestDto;
 import zw.co.kenac.takeu.backend.dto.waterdelivery.response.WaterOrderResponse;
 import zw.co.kenac.takeu.backend.service.waterdelivery.WaterOrderService;
@@ -25,7 +26,7 @@ public class WaterOrderController {
     private final WaterOrderService waterOrderService;
 
     @Operation(summary = "Create a new water order")
-    @PostMapping
+    @PostMapping("/create")
     public ResponseEntity<GenericResponse<WaterOrderResponse>> createOrder(@Valid @RequestBody WaterOrderCreateRequestDto request) {
        log.info("WaterOrderController.createOrder: request: {}", JsonUtil.toJson(request));
         WaterOrderResponse response = waterOrderService.createOrder(request);
@@ -33,9 +34,19 @@ public class WaterOrderController {
     }
 
     @Operation(summary = "Get all water orders")
-    @GetMapping
-    public ResponseEntity<GenericResponse<List<WaterOrderResponse>>> getAllOrders() {
-        List<WaterOrderResponse> orders = waterOrderService.getAllOrders();
+    @GetMapping("/getall")
+    public ResponseEntity<GenericResponse<PaginatedResponse<WaterOrderResponse>>> getAllOrders(@RequestParam(defaultValue = "ALL") String status,
+                                                                                               @RequestParam(defaultValue = "1") int pageNumber,
+                                                                                               @RequestParam(defaultValue = "25") int pageSize) {
+        PaginatedResponse<WaterOrderResponse> orders = waterOrderService.getAllOrders(status,pageNumber, pageSize);
+        return ResponseEntity.ok(GenericResponse.success(orders));
+    }
+    @Operation(summary = "Get client recent Deliveries")
+    @GetMapping("/{clientId}")
+    public ResponseEntity<GenericResponse<PaginatedResponse<WaterOrderResponse>>> getClientOrder(@PathVariable Long clientId,@RequestParam(defaultValue = "ALL") String status,
+                                                                                  @RequestParam(defaultValue = "1") int pageNumber,
+                                                                                  @RequestParam(defaultValue = "25") int pageSize) {
+        PaginatedResponse<WaterOrderResponse> orders = waterOrderService.getOrdersByClient(clientId,status,pageNumber, pageSize);
         return ResponseEntity.ok(GenericResponse.success(orders));
     }
 

@@ -1,8 +1,14 @@
 package zw.co.kenac.takeu.backend.service.waterdelivery.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import zw.co.kenac.takeu.backend.dto.CustomPagination;
+import zw.co.kenac.takeu.backend.dto.PaginatedResponse;
+import zw.co.kenac.takeu.backend.dto.driver.DriverDeliveryResponse;
 import zw.co.kenac.takeu.backend.dto.waterdelivery.request.DropOffLocationRequestDto;
 import zw.co.kenac.takeu.backend.dto.waterdelivery.request.ScheduledDetailsRequestDto;
 import zw.co.kenac.takeu.backend.dto.waterdelivery.request.WaterDeliveryCreateRequestDto;
@@ -12,6 +18,7 @@ import zw.co.kenac.takeu.backend.dto.waterdelivery.response.WaterOrderResponse;
 import zw.co.kenac.takeu.backend.exception.custom.ResourceNotFoundException;
 import zw.co.kenac.takeu.backend.model.ClientAddressesEntity;
 import zw.co.kenac.takeu.backend.model.ClientEntity;
+import zw.co.kenac.takeu.backend.model.DeliveryEntity;
 import zw.co.kenac.takeu.backend.model.embedded.DropOffLocation;
 import zw.co.kenac.takeu.backend.model.embedded.ScheduledDetails;
 import zw.co.kenac.takeu.backend.model.enumeration.DeliveryStatus;
@@ -87,29 +94,33 @@ public class WaterOrderServiceImpl implements WaterOrderService {
     }
 
     @Override
-    public List<WaterOrderResponse> getOrdersByClient(Long clientId) {
-        List<WaterOrder> orders = waterOrderRepository.findByClientEntityId(clientId);
-        return orders.stream()
-                .map(order -> mapToResponse(order, order.getDeliveries()))
-                .collect(Collectors.toList());
+    public PaginatedResponse<WaterOrderResponse> getOrdersByClient(Long clientId, String status, int pageNumber, int pageSize) {
+        Pageable pageable = PageRequest.of(pageNumber - 1, pageSize);
+
+        if (status.equals("ALL")) {
+            Page<WaterOrder> deliveries = waterOrderRepository.findByClient(pageable,clientId);
+            return paginateResponse(deliveries);
+        } else {
+            Page<WaterOrder> deliveries = waterOrderRepository.findByClientAndStatus(pageable, clientId,status);
+            return paginateResponse(deliveries);
+        }
+
+
     }
 
-    @Override
-    public List<WaterOrderResponse> getOrdersByDriver(Long driverId) {
-        List<WaterDelivery> deliveries = waterDeliveryRepository.findByDriverEntityId(driverId);
-        return deliveries.stream()
-                .map(WaterDelivery::getOrder)
-                .distinct()
-                .map(order -> mapToResponse(order, order.getDeliveries()))
-                .collect(Collectors.toList());
-    }
+
 
     @Override
-    public List<WaterOrderResponse> getAllOrders() {
-        List<WaterOrder> orders = waterOrderRepository.findAll();
-        return orders.stream()
-                .map(order -> mapToResponse(order, order.getDeliveries()))
-                .collect(Collectors.toList());
+    public PaginatedResponse<WaterOrderResponse> getAllOrders(String status, int pageNumber, int pageSize) {
+        Pageable pageable = PageRequest.of(pageNumber - 1, pageSize);
+
+        if (status.equals("ALL")) {
+            Page<WaterOrder> deliveries = waterOrderRepository.findByAll(pageable);
+            return paginateResponse(deliveries);
+        } else {
+            Page<WaterOrder> deliveries = waterOrderRepository.findAllAndStatus(pageable,status);
+            return paginateResponse(deliveries);
+        }
     }
 
     private WaterDelivery createDelivery(WaterOrder order, WaterDeliveryCreateRequestDto request) {
@@ -171,7 +182,24 @@ public class WaterOrderServiceImpl implements WaterOrderService {
         if (dto == null) return null;
         return new ScheduledDetails(dto.getScheduledDate(), dto.getScheduledTime());
     }
+    public PaginatedResponse<WaterOrderResponse> paginateResponse(Page<WaterOrder> page) {
+        List<WaterOrder> deliveries = page.getContent();
 
+        List<WaterOrderResponse> driverDeliveryResponses = deliveries.stream()
+                .map(x->{
+                    return mapToResponse(x,x.getDeliveries());
+                })
+                .toList();
+
+        CustomPagination pagination = new CustomPagination(
+                page.getTotalElements(),
+                page.getTotalPages(),
+                page.getNumber() + 1,
+                page.getSize()
+        );
+
+        return new PaginatedResponse<>(driverDeliveryResponses, pagination);
+    }
     private WaterOrderResponse mapToResponse(WaterOrder order, List<WaterDelivery> deliveries) {
         return WaterOrderResponse.builder()
                 .orderId(order.getEntityId())

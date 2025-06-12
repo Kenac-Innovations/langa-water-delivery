@@ -1,5 +1,6 @@
 package zw.co.kenac.takeu.backend.service.waterdelivery;
 
+import zw.co.kenac.takeu.backend.dto.PaginatedResponse;
 import zw.co.kenac.takeu.backend.dto.waterdelivery.request.WaterOrderCreateRequestDto;
 import zw.co.kenac.takeu.backend.dto.waterdelivery.response.WaterOrderResponse;
 
@@ -20,9 +21,9 @@ public interface WaterOrderService {
 
     WaterOrderResponse getOrderById(Long orderId);
 
-    List<WaterOrderResponse> getOrdersByClient(Long clientId);
+    PaginatedResponse<WaterOrderResponse> getOrdersByClient(Long clientId,String status, int pageNumber, int pageSize);
 
-    List<WaterOrderResponse> getOrdersByDriver(Long driverId);
+   // PaginatedResponse<WaterOrderResponse> getOrdersByDriver(Long driverId,String status, int pageNumber, int pageSize);
 
-    List<WaterOrderResponse> getAllOrders();
+    PaginatedResponse<WaterOrderResponse> getAllOrders(String status, int pageNumber, int pageSize);
 } 
