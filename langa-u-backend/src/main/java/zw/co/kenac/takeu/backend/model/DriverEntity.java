@@ -3,6 +3,7 @@ package zw.co.kenac.takeu.backend.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import zw.co.kenac.takeu.backend.model.waterdelivery.WaterDelivery;
 import zw.co.kenac.takeu.backend.walletmodule.models.WalletAccount;
 
 import java.time.LocalDateTime;
@@ -60,7 +61,7 @@ public class DriverEntity extends AbstractEntity {
     private Set<VehicleEntity> vehicles;
 
     @OneToMany(mappedBy = "driver", cascade = CascadeType.DETACH)
-    private List<DeliveryEntity> deliveries;
+    private List<WaterDelivery> deliveries;
 
     @OneToMany(mappedBy = "driver")
     private List<AvailableDriverEntity> availableDrivers;

@@ -11,10 +11,12 @@ import java.io.Serializable;
 @Value
 @Builder
 public class DropOffLocationRequestDto implements Serializable {
+    Boolean useMyContact;
+    Long addressId;
     Double dropOffLatitude;
     Double dropOffLongitude;
     String dropOffLocation;
-    String dropOffAddressType;
+    String dropOffAddressTyped;
     String dropOffContactName;
     String dropOffContactPhone;
 }

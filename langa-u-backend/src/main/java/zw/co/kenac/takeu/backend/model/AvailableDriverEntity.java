@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import zw.co.kenac.takeu.backend.model.waterdelivery.WaterDelivery;
 
 import java.time.LocalDateTime;
 
@@ -35,5 +36,5 @@ public class AvailableDriverEntity extends AbstractEntity {
 
     @ManyToOne
     @JoinColumn(name = "delivery_id", referencedColumnName = "entity_id")
-    private DeliveryEntity delivery;
+    private WaterDelivery delivery;
 }

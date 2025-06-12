@@ -412,6 +412,7 @@ public class ClientDeliveryServiceImpl implements ClientDeliveryService {
                 latitude,
                 longitude,
                 location,
+                "",
                 contactName,
                 contactPhone
         );

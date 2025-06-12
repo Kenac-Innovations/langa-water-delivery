@@ -22,7 +22,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "ms_deliveries")
-@SuperBuilder
+
 public class DeliveryEntity extends AbstractEntity {
 
     @Column(precision = 30, scale = 4)
@@ -96,8 +96,8 @@ public class DeliveryEntity extends AbstractEntity {
     @OneToOne(mappedBy = "delivery")
     private DropOffEntity dropOff;
 
-    @OneToMany(mappedBy = "delivery")
-    private List<AvailableDriverEntity> availableDrivers;
+//    @OneToMany(mappedBy = "delivery")
+//    private List<AvailableDriverEntity> availableDrivers;
     @CreationTimestamp
     private LocalDateTime createdAt;
     @UpdateTimestamp

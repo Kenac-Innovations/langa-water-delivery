@@ -273,11 +273,11 @@ public class DriverDeliveryServiceImpl implements DriverDeliveryService {
         AvailableDriverEntity propose = new AvailableDriverEntity();
         propose.setLatitude(request.latitude());
         propose.setLongitude(request.longitude());
-        propose.setDelivery(delivery);
+       // propose.setDelivery(delivery);
         propose.setStatus(DeliveryStatus.OPEN.name());
         propose.setDriver(driver);
         propose.setVehicle(vehicle);
-        propose.setDelivery(delivery);
+        //propose.setDelivery(delivery);
         AvailableDriverEntity availableDriver = availableDriverRepository.save(propose);
         eventPublisher.publishEvent(new ProposalCreatedEvent(this, mapToDriverDeliveryProposalDto(availableDriver)));
 

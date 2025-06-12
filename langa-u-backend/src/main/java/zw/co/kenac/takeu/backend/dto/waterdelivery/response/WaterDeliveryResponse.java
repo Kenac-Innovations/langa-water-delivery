@@ -4,21 +4,22 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import zw.co.kenac.takeu.backend.model.enumeration.DeliveryStatus;
+import zw.co.kenac.takeu.backend.model.embedded.DropOffLocation;
+import zw.co.kenac.takeu.backend.model.embedded.ScheduledDetails;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @Data
 @Builder
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
 public class WaterDeliveryResponse {
     private Long deliveryId;
-    private Integer quantity;
-    private LocalDateTime deliveryDate;
-    private String deliveryNotes;
-    private DeliveryStatus status;
-    private BigDecimal unitPrice;
-    private BigDecimal totalPrice;
+    private BigDecimal priceAmount;
+    private Boolean autoAssignDriver;
+    private DropOffLocation dropOffLocation;
+    private Boolean isScheduled;
+    private String deliveryInstructions;
+    private ScheduledDetails scheduledDetails;
+    private String status;
 } 

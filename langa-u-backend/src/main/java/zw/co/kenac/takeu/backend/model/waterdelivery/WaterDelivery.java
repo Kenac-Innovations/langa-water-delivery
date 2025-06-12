@@ -53,8 +53,8 @@ public class WaterDelivery extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "vehicle_entity_id", referencedColumnName = "entity_id")
     private VehicleEntity vehicle;
-    @OneToOne(mappedBy = "delivery")
-    private DriverRatingEntity driverRating;
+//    @OneToOne(mappedBy = "delivery")
+//    private DriverRatingEntity driverRating;
 
 
     @OneToMany(mappedBy = "delivery")

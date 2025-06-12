@@ -18,10 +18,12 @@ import java.util.List;
 @Builder
 public class WaterOrderCreateRequestDto implements Serializable {
     Long entityId;
+    Long clientId;
     LocalDateTime createdDate;
     LocalDateTime lastModifiedDate;
+    String promoCode;
     OrderStatus orderStatus;
-    List<WaterDeliveryRequestDto> deliveries;
+    List<WaterDeliveryCreateRequestDto> deliveries;
     PaymentStatus paymentStatus;
     BigDecimal totalAmount;
     LocalDateTime orderDate;

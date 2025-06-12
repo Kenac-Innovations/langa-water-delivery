@@ -1,4 +1,4 @@
-package zw.co.kenac.takeu.backend.controller;
+package zw.co.kenac.takeu.backend.controller.waterdelivery;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,8 +19,6 @@ import zw.co.kenac.takeu.backend.dto.auth.client.PasswordResetOtpRequest;
 import zw.co.kenac.takeu.backend.dto.auth.client.PasswordResetOtpVerifyRequest;
 import zw.co.kenac.takeu.backend.dto.auth.client.SecurityChallengeRequest;
 import zw.co.kenac.takeu.backend.service.client.ClientAuthService;
-
-import static zw.co.kenac.takeu.backend.dto.GenericResponse.success;
 
 @RestController
 @RequestMapping("/api/v2/auth")

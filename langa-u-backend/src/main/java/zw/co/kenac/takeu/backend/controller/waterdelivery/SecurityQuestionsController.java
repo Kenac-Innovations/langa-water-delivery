@@ -1,4 +1,4 @@
-package zw.co.kenac.takeu.backend.controller;
+package zw.co.kenac.takeu.backend.controller.waterdelivery;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

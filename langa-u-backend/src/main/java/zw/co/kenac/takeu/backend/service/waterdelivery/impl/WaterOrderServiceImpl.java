@@ -3,25 +3,30 @@ package zw.co.kenac.takeu.backend.service.waterdelivery.impl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import zw.co.kenac.takeu.backend.dto.waterdelivery.request.CreateWaterOrderRequest;
-import zw.co.kenac.takeu.backend.dto.waterdelivery.request.WaterDeliveryRequestDto;
+import zw.co.kenac.takeu.backend.dto.waterdelivery.request.DropOffLocationRequestDto;
+import zw.co.kenac.takeu.backend.dto.waterdelivery.request.ScheduledDetailsRequestDto;
+import zw.co.kenac.takeu.backend.dto.waterdelivery.request.WaterDeliveryCreateRequestDto;
+import zw.co.kenac.takeu.backend.dto.waterdelivery.request.WaterOrderCreateRequestDto;
 import zw.co.kenac.takeu.backend.dto.waterdelivery.response.WaterDeliveryResponse;
 import zw.co.kenac.takeu.backend.dto.waterdelivery.response.WaterOrderResponse;
 import zw.co.kenac.takeu.backend.exception.custom.ResourceNotFoundException;
+import zw.co.kenac.takeu.backend.model.ClientAddressesEntity;
 import zw.co.kenac.takeu.backend.model.ClientEntity;
+import zw.co.kenac.takeu.backend.model.embedded.DropOffLocation;
+import zw.co.kenac.takeu.backend.model.embedded.ScheduledDetails;
+import zw.co.kenac.takeu.backend.model.enumeration.DeliveryStatus;
+import zw.co.kenac.takeu.backend.model.waterdelivery.Promotions;
 import zw.co.kenac.takeu.backend.model.waterdelivery.WaterDelivery;
 import zw.co.kenac.takeu.backend.model.waterdelivery.WaterOrder;
-import zw.co.kenac.takeu.backend.model.enumeration.DeliveryStatus;
 import zw.co.kenac.takeu.backend.model.enumeration.OrderStatus;
 import zw.co.kenac.takeu.backend.model.enumeration.PaymentStatus;
-import zw.co.kenac.takeu.backend.repository.ClientRepository;
-import zw.co.kenac.takeu.backend.repository.WaterDeliveryRepository;
-import zw.co.kenac.takeu.backend.repository.WaterOrderRepository;
+import zw.co.kenac.takeu.backend.repository.*;
 import zw.co.kenac.takeu.backend.service.waterdelivery.WaterOrderService;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,55 +37,139 @@ public class WaterOrderServiceImpl implements WaterOrderService {
     private final WaterOrderRepository waterOrderRepository;
     private final WaterDeliveryRepository waterDeliveryRepository;
     private final ClientRepository clientRepository;
-
-    private static final BigDecimal UNIT_PRICE = new BigDecimal("5.00"); // Example unit price
+    private final PromotionsRepository promotionsRepository;
+    private final ClientAddressRepository clientAddressRepository;
 
     @Override
-    public WaterOrderResponse createOrder(CreateWaterOrderRequest request) {
-        // Find client
+    public WaterOrderResponse createOrder(WaterOrderCreateRequestDto request) {
         ClientEntity client = clientRepository.findById(request.getClientId())
                 .orElseThrow(() -> new ResourceNotFoundException("Client not found with id: " + request.getClientId()));
 
-        // Create water order
+        BigDecimal totalAmount = request.getDeliveries().stream()
+                .map(WaterDeliveryCreateRequestDto::getPriceAmount)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         WaterOrder order = new WaterOrder();
         order.setClient(client);
-        order.setDeliveryAddress(request.getDeliveryAddress());
-        order.setSpecialInstructions(request.getSpecialInstructions());
         order.setOrderStatus(OrderStatus.CREATED);
         order.setPaymentStatus(PaymentStatus.PENDING);
+        if (request.getPromoCode() != null) {
+            Promotions promotions = promotionsRepository.findByPromoCode(request.getPromoCode()).orElse(null);
+            if (promotions != null && promotions.getIsActive()) {
+                BigDecimal discountAmount = totalAmount.multiply(BigDecimal.valueOf(promotions.getDiscountPercentage()).divide(BigDecimal.valueOf(100)));
+                totalAmount = totalAmount.subtract(discountAmount);
+            }
+        }
+
+        order.setTotalAmount(totalAmount);
         order.setOrderDate(LocalDateTime.now());
 
-        // Save order first to get the ID
-        order = waterOrderRepository.save(order);
+        WaterOrder savedOrder = waterOrderRepository.save(order);
 
         // Create and save deliveries
         List<WaterDelivery> deliveries = request.getDeliveries().stream()
-                .map(deliveryRequest -> createDelivery(order, deliveryRequest))
+                .map(deliveryRequest -> createDelivery(savedOrder, deliveryRequest))
                 .collect(Collectors.toList());
 
-        // Calculate total amount
-        BigDecimal totalAmount = deliveries.stream()
-                .map(WaterDelivery::getTotalPrice)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        order.setTotalAmount(totalAmount);
-        order = waterOrderRepository.save(order);
+        savedOrder.setDeliveries(deliveries);
+        waterOrderRepository.save(savedOrder);
 
         // Convert to response DTO
-        return mapToResponse(order, deliveries);
+        return mapToResponse(savedOrder, deliveries);
     }
 
-    private WaterDelivery createDelivery(WaterOrder order, WaterDeliveryRequestDto request) {
+    @Override
+    public WaterOrderResponse getOrderById(Long orderId) {
+        WaterOrder order = waterOrderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+        return mapToResponse(order, order.getDeliveries());
+    }
+
+    @Override
+    public List<WaterOrderResponse> getOrdersByClient(Long clientId) {
+        List<WaterOrder> orders = waterOrderRepository.findByClientEntityId(clientId);
+        return orders.stream()
+                .map(order -> mapToResponse(order, order.getDeliveries()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<WaterOrderResponse> getOrdersByDriver(Long driverId) {
+        List<WaterDelivery> deliveries = waterDeliveryRepository.findByDriverEntityId(driverId);
+        return deliveries.stream()
+                .map(WaterDelivery::getOrder)
+                .distinct()
+                .map(order -> mapToResponse(order, order.getDeliveries()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<WaterOrderResponse> getAllOrders() {
+        List<WaterOrder> orders = waterOrderRepository.findAll();
+        return orders.stream()
+                .map(order -> mapToResponse(order, order.getDeliveries()))
+                .collect(Collectors.toList());
+    }
+
+    private WaterDelivery createDelivery(WaterOrder order, WaterDeliveryCreateRequestDto request) {
         WaterDelivery delivery = new WaterDelivery();
         delivery.setOrder(order);
-        delivery.setQuantity(request.getQuantity());
-        delivery.setDeliveryDate(request.getDeliveryDate());
-        delivery.setDeliveryNotes(request.getDeliveryNotes());
-        delivery.setStatus(DeliveryStatus.PENDING);
-        delivery.setUnitPrice(UNIT_PRICE);
-        delivery.setTotalPrice(UNIT_PRICE.multiply(new BigDecimal(request.getQuantity())));
+        delivery.setPriceAmount(request.getPriceAmount());
+        delivery.setAutoAssignDriver(request.getAutoAssignDriver());
+        delivery.setIsScheduled(request.getIsScheduled());
+        delivery.setDeliveryInstructions(request.getDeliveryInstructions());
+        delivery.setDeliveryStatus(DeliveryStatus.OPEN.name()); // Default status
+
+        if (request.getDropOffLocation() != null) {
+            delivery.setDropOffLocation(mapDropOffLocation(request.getDropOffLocation(), order));
+        }
+
+        if (request.getScheduledDetails() != null) {
+            delivery.setScheduledDetails(mapScheduledDetails(request.getScheduledDetails()));
+        }
 
         return waterDeliveryRepository.save(delivery);
+    }
+
+    private DropOffLocation mapDropOffLocation(DropOffLocationRequestDto dto, WaterOrder order) {
+        if (dto == null) return null;
+        if (dto.getAddressId() != null) {
+            ClientAddressesEntity clientAddresses = clientAddressRepository.findById(dto.getAddressId()).orElse(null);
+            if (clientAddresses != null) {
+                if (dto.getUseMyContact()) {
+                    return DropOffLocation.builder().dropOffAddressType(clientAddresses.getAddressEntered())
+                            .dropOffLatitude(clientAddresses.getLatitude())
+                            .dropOffLongitude(clientAddresses.getLongitude())
+                            .dropOffLocation((clientAddresses.getAddressFormatted()))
+                            .dropOffContactName(order.getClient().getFullName())
+                            .dropOffContactPhone(order.getClient().getMobileNumber())
+                            .build();
+
+                } else {
+                    return DropOffLocation.builder().dropOffAddressType(clientAddresses.getAddressEntered())
+                            .dropOffLatitude(clientAddresses.getLatitude())
+                            .dropOffLongitude(clientAddresses.getLongitude())
+                            .dropOffLocation((clientAddresses.getAddressFormatted()))
+                            .dropOffContactName(dto.getDropOffContactName())
+                            .dropOffContactPhone(dto.getDropOffContactPhone())
+                            .build();
+                }
+            }
+        }
+
+
+        return new DropOffLocation(dto.getDropOffLatitude()
+                , dto.getDropOffLongitude()
+                , dto.getDropOffLocation()
+                , dto.getDropOffAddressTyped()
+                , dto.getUseMyContact() != null && dto.getUseMyContact() ? order.getClient().getFullName() : dto.getDropOffContactName()
+                , dto.getUseMyContact() != null && dto.getUseMyContact() ? order.getClient().getMobileNumber() : dto.getDropOffContactPhone());
+    }
+
+    private ScheduledDetails mapScheduledDetails(ScheduledDetailsRequestDto dto) {
+        if (dto == null) return null;
+        return new ScheduledDetails(dto.getScheduledDate(), dto.getScheduledTime());
     }
 
     private WaterOrderResponse mapToResponse(WaterOrder order, List<WaterDelivery> deliveries) {
@@ -88,8 +177,6 @@ public class WaterOrderServiceImpl implements WaterOrderService {
                 .orderId(order.getEntityId())
                 .clientId(order.getClient().getEntityId())
                 .clientName(order.getClient().getFullName())
-                .deliveryAddress(order.getDeliveryAddress())
-                .specialInstructions(order.getSpecialInstructions())
                 .orderStatus(order.getOrderStatus())
                 .paymentStatus(order.getPaymentStatus())
                 .totalAmount(order.getTotalAmount())
@@ -103,12 +190,13 @@ public class WaterOrderServiceImpl implements WaterOrderService {
     private WaterDeliveryResponse mapDeliveryToResponse(WaterDelivery delivery) {
         return WaterDeliveryResponse.builder()
                 .deliveryId(delivery.getEntityId())
-                .quantity(delivery.getQuantity())
-                .deliveryDate(delivery.getDeliveryDate())
-                .deliveryNotes(delivery.getDeliveryNotes())
-                .status(delivery.getStatus())
-                .unitPrice(delivery.getUnitPrice())
-                .totalPrice(delivery.getTotalPrice())
+                .priceAmount(delivery.getPriceAmount())
+                .autoAssignDriver(delivery.getAutoAssignDriver())
+                .dropOffLocation(delivery.getDropOffLocation())
+                .isScheduled(delivery.getIsScheduled())
+                .deliveryInstructions(delivery.getDeliveryInstructions())
+                .scheduledDetails(delivery.getScheduledDetails())
+                .status(delivery.getDeliveryStatus())
                 .build();
     }
 } 
