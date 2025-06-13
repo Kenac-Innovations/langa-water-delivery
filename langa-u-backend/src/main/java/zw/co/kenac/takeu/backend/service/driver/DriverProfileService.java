@@ -6,7 +6,6 @@ import zw.co.kenac.takeu.backend.dto.driver.DriverProfile;
 public interface DriverProfileService {
 
     DriverProfile findDriverProfile(Long driverId);
-
     DriverProfile updateDriverProfile(Long driverId);
     DriverProfile updateOnlineStatus(Long driverId, Boolean online);
     DriverProfile updateDeliverySearchRadius(Long driverId, Double deliverySearchRadius);
