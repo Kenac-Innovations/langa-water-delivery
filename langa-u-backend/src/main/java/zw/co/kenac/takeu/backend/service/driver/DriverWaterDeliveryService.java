@@ -13,4 +13,6 @@ import zw.co.kenac.takeu.backend.model.waterdelivery.WaterDelivery;
 public interface DriverWaterDeliveryService {
     public WaterDeliveryResponse acceptDelivery(Long driverId, Long waterDeliveryId);
     public WaterDeliveryResponse completeDelivery(DriverWaterDeliveryCompleteRequest id);
+    public WaterDeliveryResponse cancelDelivery(Long driverId, Long waterDeliveryId);
+    public WaterDeliveryResponse startDelivery(Long waterDeliveryId);
 }

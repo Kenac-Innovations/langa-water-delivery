@@ -45,4 +45,4 @@ src/main/java/zw/co/kenac/.DS_Store
 ### Testing FTP Folder ###
 ./file:target/
 ./file:target/upload/
-takeu-dev-firebase.json
+langa-dev-firebase.json
