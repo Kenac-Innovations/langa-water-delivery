@@ -36,8 +36,8 @@ class _LoginScreenState extends State<LoginScreen> {
       await Future.delayed(const Duration(seconds: 1));
 
       // Mock authentication logic based on the scenario
-      if (_fullPhoneNumber == "+1234567890" &&
-          _passwordController.text == "SecurePass123!") {
+      if (_fullPhoneNumber == "+263776149765" &&
+          _passwordController.text == "cyber17") {
         if (mounted) {
           Fluttertoast.showToast(
               msg: "Login Successful!", backgroundColor: Colors.green);
