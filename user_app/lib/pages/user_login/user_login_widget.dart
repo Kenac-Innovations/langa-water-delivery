@@ -212,7 +212,7 @@ class _LoginScreenState extends State<LoginScreen> {
       decoration: _buildInputDecoration(
         hintText: 'Phone Number',
       ).copyWith(counterText: ''),
-      initialCountryCode: 'ZW', // Default country
+      initialCountryCode: 'ZW',
       keyboardType: TextInputType.phone,
       onChanged: (intl_phone_number.PhoneNumber phone) {
         setState(() {

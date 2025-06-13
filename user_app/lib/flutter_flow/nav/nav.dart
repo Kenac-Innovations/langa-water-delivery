@@ -111,7 +111,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
             name: 'HomePage',
             path: '/homePage',
             builder: (context, state) {
-              return const HomeScreenPage();
+              return const HomePage();
             }),
         GoRoute(
           name: 'Change_Password',
