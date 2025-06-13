@@ -47,3 +47,4 @@ src/main/java/zw/co/kenac/.DS_Store
 ./file:target/upload/
 langa-dev-firebase.json
 langas-dev-firebase.json
+firebase.json
