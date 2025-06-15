@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_bloc.dart';
@@ -18,6 +19,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final scaffoldKey = GlobalKey<ScaffoldState>();
   User? _currentUser;
+  bool _isFabExtended = true;
 
   @override
   void initState() {
@@ -35,34 +37,53 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       drawer: const AppDrawer(),
       appBar: _buildAppBar(),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(vertical: 16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildDeliveryAddressCard(),
-            const SizedBox(height: 24),
-            _buildQuickActionsCard(),
-            const SizedBox(height: 24),
-            _buildPromotionsSection(),
-            const SizedBox(height: 24),
-            _buildSupportSection(),
-            const SizedBox(height: 80), // Extra space for FAB
-          ],
+      body: NotificationListener<UserScrollNotification>(
+        onNotification: (notification) {
+          final Direction = notification.direction;
+          if (Direction == ScrollDirection.reverse) {
+            if (_isFabExtended) setState(() => _isFabExtended = false);
+          } else if (Direction == ScrollDirection.forward) {
+            if (!_isFabExtended) setState(() => _isFabExtended = true);
+          }
+          return true;
+        },
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(vertical: 16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDeliveryAddressCard(),
+              const SizedBox(height: 24),
+              _buildQuickActionsCard(),
+              const SizedBox(height: 24),
+              _buildPromotionsSection(),
+              const SizedBox(height: 24),
+              _buildSupportSection(),
+              const SizedBox(height: 80), // Extra space for FAB
+            ],
+          ),
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.pushNamed('Create_Delivery'),
-        backgroundColor: FlutterFlowTheme.of(context).primary,
-        foregroundColor: Colors.white,
-        elevation: 8,
-        icon: const Icon(Icons.water_drop, size: 24),
-        label: const Text(
-          'Create a New Order',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-      ),
+      floatingActionButton: _isFabExtended
+          ? FloatingActionButton.extended(
+              onPressed: () => context.pushNamed('Create_Delivery'),
+              backgroundColor: FlutterFlowTheme.of(context).primary,
+              foregroundColor: Colors.white,
+              elevation: 8,
+              icon: const Icon(Icons.water_drop, size: 24),
+              label: const Text(
+                'Create a New Order',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            )
+          : FloatingActionButton(
+              onPressed: () => context.pushNamed('Create_Delivery'),
+              backgroundColor: FlutterFlowTheme.of(context).primary,
+              foregroundColor: Colors.white,
+              elevation: 8,
+              child: const Icon(Icons.water_drop, size: 28),
+            ),
     );
   }
 
@@ -137,7 +158,7 @@ class _HomePageState extends State<HomePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Delivery Address',
+                      'Current Location',
                       style:
                           TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
@@ -165,18 +186,6 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 36,
-                      child: ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: FlutterFlowTheme.of(context).primary,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('Change Address'),
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -188,7 +197,7 @@ class _HomePageState extends State<HomePage> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey.shade200),
                 ),
-                child: Icon(Icons.home_outlined,
+                child: Icon(Icons.location_pin,
                     size: 32, color: FlutterFlowTheme.of(context).primary),
               )
             ],

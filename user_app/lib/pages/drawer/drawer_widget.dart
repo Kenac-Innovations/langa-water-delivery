@@ -1,7 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart'; // Import GoRouter
+import 'package:go_router/go_router.dart';
 import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_bloc.dart';
 import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_event.dart';
 import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_state.dart';
@@ -47,13 +46,12 @@ class AppDrawer extends StatelessWidget {
                   ),
                 ),
                 currentAccountPicture: CircleAvatar(
-                  backgroundColor: Colors.white,
-                  child: ClipOval(
-                    child: Icon(
-                      Icons.person,
-                      size: 50,
-                      color: Colors.grey.shade400,
-                    ),
+                  backgroundColor:
+                      FlutterFlowTheme.of(context).primary.withOpacity(0.5),
+                  child: const Icon(
+                    Icons.person,
+                    size: 50,
+                    color: Colors.white,
                   ),
                 ),
               ),
@@ -67,9 +65,19 @@ class AppDrawer extends StatelessWidget {
                         const SizedBox(height: 10),
                         _buildDrawerItem(
                           context,
-                          'assets/images/truck_(1)_1_(traced).png',
-                          'Current Deliveries',
-                          () {
+                          icon: Icons.home_outlined,
+                          title: 'Home',
+                          onTap: () {
+                            context.pop();
+                            context.goNamed('HomePage');
+                          },
+                        ),
+                        _buildDivider(context),
+                        _buildDrawerItem(
+                          context,
+                          icon: Icons.receipt_long_outlined,
+                          title: 'Orders',
+                          onTap: () {
                             context.pop();
                             context.pushNamed('Current_Deliveries');
                           },
@@ -77,19 +85,29 @@ class AppDrawer extends StatelessWidget {
                         _buildDivider(context),
                         _buildDrawerItem(
                           context,
-                          'assets/images/history_1_(traced).png',
-                          'Delivery History',
-                          () {
+                          icon: Icons.location_on_outlined,
+                          title: 'Addresses',
+                          onTap: () {
                             context.pop();
-                            context.pushNamed('Delivery_History');
+                            context.pushNamed('Address');
                           },
                         ),
                         _buildDivider(context),
                         _buildDrawerItem(
                           context,
-                          'assets/images/active_1_(traced).png',
-                          'Notification',
-                          () {
+                          icon: Icons.payment_outlined,
+                          title: 'Payments',
+                          onTap: () {
+                            context.pop();
+                            context.pushNamed('Payment_Method');
+                          },
+                        ),
+                        _buildDivider(context),
+                        _buildDrawerItem(
+                          context,
+                          icon: Icons.notifications_outlined,
+                          title: 'Notifications',
+                          onTap: () {
                             context.pop();
                             context.pushNamed('Notification');
                           },
@@ -97,29 +115,19 @@ class AppDrawer extends StatelessWidget {
                         _buildDivider(context),
                         _buildDrawerItem(
                           context,
-                          'assets/images/user_(2)_1_(traced).png',
-                          'Profile',
-                          () {
+                          icon: Icons.person_outline,
+                          title: 'Profile',
+                          onTap: () {
                             context.pop();
                             context.pushNamed('Edit_Profile');
                           },
                         ),
-                        // _buildDivider(context),
-                        // _buildDrawerItem(
-                        //   context,
-                        //   'assets/images/settings_(1)_1_(traced).png',
-                        //   'Change Password',
-                        //   () {
-                        //     context.pop();
-                        //     context.pushNamed('Change_Password');
-                        //   },
-                        // ),
                         _buildDivider(context),
                         _buildDrawerItem(
                           context,
-                          'assets/images/logout_(3)_1_(traced).png',
-                          'Logout',
-                          () {
+                          icon: Icons.logout_outlined,
+                          title: 'Log Out',
+                          onTap: () {
                             _showLogoutConfirmationDialog(context);
                           },
                         ),
@@ -136,8 +144,10 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
-  Widget _buildDrawerItem(BuildContext context, String imagePath, String title,
-      VoidCallback onTap) {
+  Widget _buildDrawerItem(BuildContext context,
+      {required IconData icon,
+      required String title,
+      required VoidCallback onTap}) {
     return Padding(
       padding: const EdgeInsetsDirectional.fromSTEB(20.0, 12.0, 20.0, 12.0),
       child: InkWell(
@@ -148,7 +158,11 @@ class AppDrawer extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 6.0),
           child: Row(
             children: [
-              _buildIconWithFallback(context, imagePath),
+              Icon(
+                icon,
+                size: 24,
+                color: FlutterFlowTheme.of(context).primary,
+              ),
               const SizedBox(width: 16),
               Text(
                 title,
@@ -161,27 +175,6 @@ class AppDrawer extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildIconWithFallback(BuildContext context, String imagePath) {
-    return SizedBox(
-      width: 24,
-      height: 24,
-      child: Image.asset(
-        imagePath,
-        width: 24.0,
-        height: 24.0,
-        color: FlutterFlowTheme.of(context).primary,
-        fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) {
-          return Icon(
-            Icons.error_outline,
-            size: 24.0,
-            color: FlutterFlowTheme.of(context).primary,
-          );
-        },
       ),
     );
   }
@@ -206,7 +199,9 @@ class AppDrawer extends StatelessWidget {
         return AlertDialog(
           title: Text(
             'Logout',
-            style: FlutterFlowTheme.of(context).titleMedium,
+            style: FlutterFlowTheme.of(context).titleMedium.override(
+                fontFamily: 'Poppins',
+                color: FlutterFlowTheme.of(context).primaryText),
           ),
           content: Text(
             'Are you sure you want to logout?',
