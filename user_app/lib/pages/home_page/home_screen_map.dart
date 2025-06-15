@@ -18,76 +18,11 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final scaffoldKey = GlobalKey<ScaffoldState>();
-  User? _currentUser;
   bool _isFabExtended = true;
 
-  @override
-  void initState() {
-    super.initState();
-    final authState = context.read<AuthBloc>().state;
-    if (authState is Authenticated) {
-      _currentUser = authState.user;
-    }
-  }
+  // No longer need _currentUser or initState for this
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      key: scaffoldKey,
-      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
-      drawer: const AppDrawer(),
-      appBar: _buildAppBar(),
-      body: NotificationListener<UserScrollNotification>(
-        onNotification: (notification) {
-          final Direction = notification.direction;
-          if (Direction == ScrollDirection.reverse) {
-            if (_isFabExtended) setState(() => _isFabExtended = false);
-          } else if (Direction == ScrollDirection.forward) {
-            if (!_isFabExtended) setState(() => _isFabExtended = true);
-          }
-          return true;
-        },
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(vertical: 16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildDeliveryAddressCard(),
-              const SizedBox(height: 24),
-              _buildQuickActionsCard(),
-              const SizedBox(height: 24),
-              _buildPromotionsSection(),
-              const SizedBox(height: 24),
-              _buildSupportSection(),
-              const SizedBox(height: 80), // Extra space for FAB
-            ],
-          ),
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: _isFabExtended
-          ? FloatingActionButton.extended(
-              onPressed: () => context.pushNamed('Create_Delivery'),
-              backgroundColor: FlutterFlowTheme.of(context).primary,
-              foregroundColor: Colors.white,
-              elevation: 8,
-              icon: const Icon(Icons.water_drop, size: 24),
-              label: const Text(
-                'Create a New Order',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            )
-          : FloatingActionButton(
-              onPressed: () => context.pushNamed('Create_Delivery'),
-              backgroundColor: FlutterFlowTheme.of(context).primary,
-              foregroundColor: Colors.white,
-              elevation: 8,
-              child: const Icon(Icons.water_drop, size: 28),
-            ),
-    );
-  }
-
-  AppBar _buildAppBar() {
+  AppBar _buildAppBar(BuildContext context, User? user) {
     return AppBar(
       backgroundColor: FlutterFlowTheme.of(context).primary,
       elevation: 0,
@@ -110,7 +45,7 @@ class _HomePageState extends State<HomePage> {
                 .override(fontFamily: 'Poppins', color: Colors.white70),
           ),
           Text(
-            _currentUser?.firstName ?? 'Guest',
+            user?.firstName ?? 'Guest', // Use the user from the builder
             style: FlutterFlowTheme.of(context).headlineSmall.override(
                 fontFamily: 'Poppins', fontSize: 20, color: Colors.white),
           ),
@@ -127,6 +62,72 @@ class _HomePageState extends State<HomePage> {
         ),
       ],
       centerTitle: false,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        // Determine the current user from the state
+        final User? currentUser = (state is Authenticated) ? state.user : null;
+
+        return Scaffold(
+          key: scaffoldKey,
+          backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
+          drawer: const AppDrawer(),
+          appBar:
+              _buildAppBar(context, currentUser), // Pass the user to the AppBar
+          body: NotificationListener<UserScrollNotification>(
+            onNotification: (notification) {
+              final Direction = notification.direction;
+              if (Direction == ScrollDirection.reverse) {
+                if (_isFabExtended) setState(() => _isFabExtended = false);
+              } else if (Direction == ScrollDirection.forward) {
+                if (!_isFabExtended) setState(() => _isFabExtended = true);
+              }
+              return true;
+            },
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildDeliveryAddressCard(),
+                  const SizedBox(height: 24),
+                  _buildQuickActionsCard(),
+                  const SizedBox(height: 24),
+                  _buildPromotionsSection(),
+                  const SizedBox(height: 24),
+                  _buildSupportSection(),
+                  const SizedBox(height: 80),
+                ],
+              ),
+            ),
+          ),
+          floatingActionButtonLocation:
+              FloatingActionButtonLocation.centerFloat,
+          floatingActionButton: _isFabExtended
+              ? FloatingActionButton.extended(
+                  onPressed: () => context.pushNamed('Create_Delivery'),
+                  backgroundColor: FlutterFlowTheme.of(context).primary,
+                  foregroundColor: Colors.white,
+                  elevation: 8,
+                  icon: const Icon(Icons.water_drop, size: 24),
+                  label: const Text(
+                    'Create a New Order',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                )
+              : FloatingActionButton(
+                  onPressed: () => context.pushNamed('Create_Delivery'),
+                  backgroundColor: FlutterFlowTheme.of(context).primary,
+                  foregroundColor: Colors.white,
+                  elevation: 8,
+                  child: const Icon(Icons.water_drop, size: 28),
+                ),
+        );
+      },
     );
   }
 
