@@ -13,6 +13,7 @@ import 'package:langas_user/flutter_flow/flutter_flow_theme.dart';
 import 'package:langas_user/models/promotion_model.dart';
 import 'package:langas_user/models/user_model.dart';
 import 'package:langas_user/pages/drawer/drawer_widget.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -511,13 +512,12 @@ class _HomePageState extends State<HomePage> {
             childAspectRatio: 2.5,
             children: [
               _buildSupportButton(
-                  'Live Chat', Icons.chat_bubble_outline, Colors.green),
-              _buildSupportButton('Callback Request',
-                  Icons.phone_in_talk_outlined, Colors.orange),
+                  'Call Us', Icons.phone_in_talk_outlined, Colors.green),
+              _buildSupportButton('Email Us', Icons.email, Colors.blue),
               _buildSupportButton(
                   'FAQ Search', Icons.quiz_outlined, Colors.blue),
-              _buildSupportButton('Emergency Contact',
-                  Icons.contact_phone_outlined, Colors.red),
+              _buildSupportButton(
+                  'Whatsapp', FontAwesomeIcons.whatsapp, Colors.green),
             ],
           )
         ],
