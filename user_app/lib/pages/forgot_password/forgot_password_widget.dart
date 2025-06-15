@@ -36,6 +36,10 @@ class _ForgotPasswordRequestScreenState
   List<SecurityQuestion> _securityQuestions = [];
   String? _resetToken;
 
+  // State for password visibility
+  bool _isNewPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
+
   @override
   void initState() {
     super.initState();
@@ -283,9 +287,22 @@ class _ForgotPasswordRequestScreenState
                         children: [
                           TextFormField(
                             controller: _passwordController,
-                            obscureText: true,
+                            obscureText: !_isNewPasswordVisible,
                             decoration: _buildInputDecoration(
-                                label: 'New Password', context: context),
+                              label: 'New Password',
+                              context: context,
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _isNewPasswordVisible
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                  color: Colors.grey.shade600,
+                                ),
+                                onPressed: () => setState(() =>
+                                    _isNewPasswordVisible =
+                                        !_isNewPasswordVisible),
+                              ),
+                            ),
                             validator: (val) => val!.length < 6
                                 ? 'Password must be at least 6 characters'
                                 : null,
@@ -293,10 +310,22 @@ class _ForgotPasswordRequestScreenState
                           const SizedBox(height: 20),
                           TextFormField(
                             controller: _confirmPasswordController,
-                            obscureText: true,
+                            obscureText: !_isConfirmPasswordVisible,
                             decoration: _buildInputDecoration(
-                                label: 'Confirm New Password',
-                                context: context),
+                              label: 'Confirm New Password',
+                              context: context,
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _isConfirmPasswordVisible
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                  color: Colors.grey.shade600,
+                                ),
+                                onPressed: () => setState(() =>
+                                    _isConfirmPasswordVisible =
+                                        !_isConfirmPasswordVisible),
+                              ),
+                            ),
                             validator: (val) => val != _passwordController.text
                                 ? 'Passwords do not match'
                                 : null,
@@ -332,13 +361,17 @@ class _ForgotPasswordRequestScreenState
     );
   }
 
-  InputDecoration _buildInputDecoration(
-      {required String label, required BuildContext context}) {
+  InputDecoration _buildInputDecoration({
+    required String label,
+    required BuildContext context,
+    Widget? suffixIcon,
+  }) {
     final ffTheme = FlutterFlowTheme.of(context);
     return InputDecoration(
       labelText: label,
       labelStyle: TextStyle(color: Colors.grey.shade600),
       alignLabelWithHint: true,
+      suffixIcon: suffixIcon,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
