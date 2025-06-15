@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart'
     show LatLng;
+import 'package:langas_user/pages/address/address_page.dart';
 
 import 'package:langas_user/pages/change_password/change_password_widget.dart';
 import 'package:langas_user/pages/create_delivery/create_delivery_order.dart';
@@ -11,6 +12,7 @@ import 'package:langas_user/pages/edit_profile/edit_profile_widget.dart';
 import 'package:langas_user/pages/forgot_password/forgot_password_widget.dart';
 import 'package:langas_user/pages/my_wallet/my_wallet_widget.dart';
 import 'package:langas_user/pages/notification/notification_widget.dart';
+import 'package:langas_user/pages/payments/payment_method_page.dart';
 import 'package:langas_user/pages/splash_screen/splash_screen_widget.dart';
 import 'package:langas_user/pages/user_login/user_login_widget.dart';
 import 'package:langas_user/pages/user_signup/user_signup_widget.dart';
@@ -104,6 +106,16 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           name: 'Notification',
           path: '/notification',
           builder: (context, state) => NotificationWidget(),
+        ),
+        GoRoute(
+          name: 'Address',
+          path: '/address',
+          builder: (context, state) => const AddressPage(),
+        ),
+        GoRoute(
+          name: 'Payment_Method',
+          path: '/paymentMethod',
+          builder: (context, state) => const PaymentMethodPage(),
         ),
         GoRoute(
           name: 'Delivery_History',
