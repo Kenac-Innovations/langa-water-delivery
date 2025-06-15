@@ -1,4 +1,5 @@
 import 'package:dartz/dartz.dart';
+import 'package:dio/dio.dart';
 import 'package:langas_user/dto/auth_dto.dart';
 import 'package:langas_user/models/auth_response_model.dart';
 import 'package:langas_user/models/security_question_model.dart';
@@ -21,7 +22,13 @@ class AuthRepository {
     try {
       final response = await _dioClient.dio
           .post(ApiConstants.requestOtp, data: dto.toJson());
-      return Right(response.data['data'] as String? ?? 'OTP sent successfully');
+      if (response.statusCode == 200) {
+        return Right(
+            response.data['data'] as String? ?? 'OTP sent successfully');
+      } else {
+        return Left(ServerFailure(
+            message: 'Request failed with status: ${response.statusCode}'));
+      }
     } catch (e) {
       return Left(_dioClient.handleError(e));
     }
@@ -31,7 +38,12 @@ class AuthRepository {
     try {
       final response = await _dioClient.dio
           .post(ApiConstants.validateOtp, data: dto.toJson());
-      return Right(response.data['data'] as bool? ?? false);
+      if (response.statusCode == 200) {
+        return Right(response.data['data'] as bool? ?? false);
+      } else {
+        return Left(ServerFailure(
+            message: 'Request failed with status: ${response.statusCode}'));
+      }
     } catch (e) {
       return Left(_dioClient.handleError(e));
     }
@@ -42,9 +54,15 @@ class AuthRepository {
     try {
       final response =
           await _dioClient.dio.get(ApiConstants.getRandomSecurityQuestions);
-      final List<dynamic> data = response.data['data'];
-      final questions = data.map((q) => SecurityQuestion.fromJson(q)).toList();
-      return Right(questions);
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data['data'];
+        final questions =
+            data.map((q) => SecurityQuestion.fromJson(q)).toList();
+        return Right(questions);
+      } else {
+        return Left(ServerFailure(
+            message: 'Request failed with status: ${response.statusCode}'));
+      }
     } catch (e) {
       return Left(_dioClient.handleError(e));
     }
@@ -54,9 +72,14 @@ class AuthRepository {
     try {
       final response =
           await _dioClient.dio.post(ApiConstants.register, data: dto.toJson());
-      final authResult = AuthResult.fromJson(response.data['data']);
-      await _storageService.saveAuthResult(authResult);
-      return Right(authResult);
+      if (response.statusCode == 200) {
+        final authResult = AuthResult.fromJson(response.data['data']);
+        await _storageService.saveAuthResult(authResult);
+        return Right(authResult);
+      } else {
+        return Left(ServerFailure(
+            message: 'Request failed with status: ${response.statusCode}'));
+      }
     } catch (e) {
       return Left(_dioClient.handleError(e));
     }
@@ -68,9 +91,14 @@ class AuthRepository {
         ApiConstants.login,
         data: requestDto.toJson(),
       );
-      final authResult = AuthResult.fromJson(response.data['data']);
-      await _storageService.saveAuthResult(authResult);
-      return Right(authResult);
+      if (response.statusCode == 200) {
+        final authResult = AuthResult.fromJson(response.data['data']);
+        await _storageService.saveAuthResult(authResult);
+        return Right(authResult);
+      } else {
+        return Left(ServerFailure(
+            message: 'Request failed with status: ${response.statusCode}'));
+      }
     } catch (e) {
       return Left(_dioClient.handleError(e));
     }
@@ -79,9 +107,17 @@ class AuthRepository {
   Future<Either<Failure, String>> requestPasswordResetOtp(
       PasswordResetRequestOtpDto dto) async {
     try {
-      final response = await _dioClient.dio
-          .post(ApiConstants.requestPasswordResetOtp, data: dto.toJson());
-      return Right(response.data['message'] as String? ?? 'OTP sent');
+      final response = await _dioClient.dio.post(
+        ApiConstants.requestPasswordResetOtp,
+        data: dto.toJson(),
+        options: Options(responseType: ResponseType.plain),
+      );
+      if (response.statusCode == 200) {
+        return Right(response.data.toString());
+      } else {
+        return Left(ServerFailure(
+            message: 'Request failed with status: ${response.statusCode}'));
+      }
     } catch (e) {
       return Left(_dioClient.handleError(e));
     }
@@ -90,11 +126,23 @@ class AuthRepository {
   Future<Either<Failure, VerifyPasswordResetOtpResponseDto>>
       verifyPasswordResetOtp(VerifyPasswordResetOtpDto dto) async {
     try {
-      final response = await _dioClient.dio
-          .post(ApiConstants.verifyPasswordResetOtp, data: dto.toJson());
-      final data =
-          VerifyPasswordResetOtpResponseDto.fromJson(response.data['data']);
-      return Right(data);
+      final response = await _dioClient.dio.post(
+        ApiConstants.verifyPasswordResetOtp,
+        data: dto.toJson(),
+      );
+      if (response.statusCode == 200) {
+        final List<dynamic> responseData = response.data;
+        final questions = responseData
+            .map((q) => SecurityQuestion.fromJson(q as Map<String, dynamic>))
+            .toList();
+
+        final data =
+            VerifyPasswordResetOtpResponseDto(securityQuestions: questions);
+        return Right(data);
+      } else {
+        return Left(ServerFailure(
+            message: 'Request failed with status: ${response.statusCode}'));
+      }
     } catch (e) {
       return Left(_dioClient.handleError(e));
     }
@@ -103,10 +151,17 @@ class AuthRepository {
   Future<Either<Failure, String>> verifySecurityAnswers(
       VerifySecurityAnswersDto dto) async {
     try {
-      final response = await _dioClient.dio
-          .post(ApiConstants.verifySecurityAnswers, data: dto.toJson());
-  
-      return Right(response.data['data']['token'] as String);
+      final response = await _dioClient.dio.post(
+        ApiConstants.verifySecurityAnswers,
+        data: dto.toJson(),
+        options: Options(responseType: ResponseType.plain),
+      );
+      if (response.statusCode == 200) {
+        return Right(response.data.toString());
+      } else {
+        return Left(ServerFailure(
+            message: 'Request failed with status: ${response.statusCode}'));
+      }
     } catch (e) {
       return Left(_dioClient.handleError(e));
     }
@@ -115,10 +170,16 @@ class AuthRepository {
   Future<Either<Failure, String>> resetPasswordWithToken(
       ResetPasswordWithTokenDto dto) async {
     try {
-      final response = await _dioClient.dio
-          .post(ApiConstants.resetPasswordWithToken, data: dto.toJson());
-      return Right(
-          response.data['message'] as String? ?? 'Password reset successfully');
+      final response = await _dioClient.dio.post(
+          ApiConstants.resetPasswordWithToken,
+          data: dto.toJson(),
+          options: Options(responseType: ResponseType.plain));
+      if (response.statusCode == 200) {
+        return Right(response.data.toString());
+      } else {
+        return Left(ServerFailure(
+            message: 'Request failed with status: ${response.statusCode}'));
+      }
     } catch (e) {
       return Left(_dioClient.handleError(e));
     }

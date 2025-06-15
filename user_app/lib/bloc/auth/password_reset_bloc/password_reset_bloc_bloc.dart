@@ -51,7 +51,7 @@ class PasswordResetBloc extends Bloc<PasswordResetEvent, PasswordResetState> {
     final result = await authRepository.resetPasswordWithToken(event.dto);
     result.fold(
       (failure) => emit(PasswordResetFailure(failure: failure)),
-      (_) => emit(PasswordResetSuccess()),
+      (message) => emit(PasswordResetSuccess(message: message)),
     );
   }
 }

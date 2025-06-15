@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-// Removed Bloc import as redirect is gone
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart'
     show LatLng;
 
-// Removed AuthBloc state import
 import 'package:langas_user/pages/change_password/change_password_widget.dart';
 import 'package:langas_user/pages/create_delivery/create_delivery_order.dart';
 import 'package:langas_user/pages/current_deliveries/current_deliveries_widget.dart';
@@ -13,12 +11,10 @@ import 'package:langas_user/pages/edit_profile/edit_profile_widget.dart';
 import 'package:langas_user/pages/forgot_password/forgot_password_widget.dart';
 import 'package:langas_user/pages/my_wallet/my_wallet_widget.dart';
 import 'package:langas_user/pages/notification/notification_widget.dart';
-import 'package:langas_user/pages/reset_password/reset_password_page.dart';
 import 'package:langas_user/pages/splash_screen/splash_screen_widget.dart';
 import 'package:langas_user/pages/user_login/user_login_widget.dart';
 import 'package:langas_user/pages/user_signup/user_signup_widget.dart';
 import 'package:langas_user/pages/home_page/home_screen_map.dart';
-// Removed AuthChangeNotifier import
 
 export 'package:go_router/go_router.dart';
 
@@ -78,19 +74,6 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           path: '/forgotPassword',
           builder: (context, state) => const ForgotPasswordRequestScreen(),
         ),
-        GoRoute(
-            name: 'ResetPasswordScreen',
-            path: '/resetPassword',
-            builder: (context, state) {
-              final loginId = state.extra as String?;
-              if (loginId == null) {
-                print('Error: Missing loginId for ResetPasswordScreen');
-                return const ErrorScreen(
-                    message:
-                        'Missing required information for password reset.');
-              }
-              return ResetPasswordScreen();
-            }),
         GoRoute(
             name: 'HomePage',
             path: '/homePage',
