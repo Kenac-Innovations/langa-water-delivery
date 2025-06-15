@@ -85,7 +85,7 @@ class RegisterRequestDto {
     required this.email,
     required this.fullName,
     required this.password,
-    this.commChannels = const ['SMS'], 
+    this.commChannels = const ['SMS'],
     required this.address,
     required this.securityAnswers,
   });
