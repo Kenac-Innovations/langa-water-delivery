@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl_phone_field/intl_phone_field.dart';
-import 'package:intl_phone_field/phone_number.dart';
-import 'package:langas_user/bloc/auth/password_reset_request/password_reset_request_bloc_bloc.dart';
-import 'package:langas_user/bloc/auth/password_reset_request/password_reset_request_bloc_event.dart';
-import 'package:langas_user/bloc/auth/password_reset_request/password_reset_request_bloc_state.dart';
+import 'package:go_router/go_router.dart';
+import 'package:langas_user/bloc/auth/password_reset_bloc/password_reset_bloc_bloc.dart';
+import 'package:langas_user/bloc/auth/password_reset_bloc/password_reset_bloc_event.dart';
+import 'package:langas_user/bloc/auth/password_reset_bloc/password_reset_bloc_state.dart';
+import 'package:langas_user/dto/auth_dto.dart';
 import 'package:langas_user/flutter_flow/flutter_flow_theme.dart';
-import 'package:langas_user/pages/reset_password/reset_password_page.dart';
+import 'package:langas_user/models/security_question_model.dart';
+import 'package:pinput/pinput.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class ForgotPasswordRequestScreen extends StatefulWidget {
   const ForgotPasswordRequestScreen({Key? key}) : super(key: key);
@@ -17,60 +19,95 @@ class ForgotPasswordRequestScreen extends StatefulWidget {
 }
 
 class _ForgotPasswordRequestScreenState
-    extends State<ForgotPasswordRequestScreen>
-    with SingleTickerProviderStateMixin {
-  final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
+    extends State<ForgotPasswordRequestScreen> {
+  int _currentStep = 0;
   bool _isLoading = false;
 
-  bool _isPhoneSelected = true;
-  late TabController _tabController;
-  String? _fullPhoneNumber;
+  final _emailFormKey = GlobalKey<FormState>();
+  final _securityQuestionsFormKey = GlobalKey<FormState>();
+  final _passwordFormKey = GlobalKey<FormState>();
+
+  final _emailController = TextEditingController();
+  final _otpController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  late List<TextEditingController> _securityAnswerControllers;
+
+  List<SecurityQuestion> _securityQuestions = [];
+  String? _resetToken;
+
+  // State for password visibility
+  bool _isNewPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
-        _emailController.clear();
-        _phoneController.clear();
-        _formKey.currentState?.reset();
-        _fullPhoneNumber = null;
-        setState(() {
-          _isPhoneSelected = _tabController.index == 0;
-        });
-      }
-    });
+    _securityAnswerControllers = [];
   }
 
   @override
   void dispose() {
     _emailController.dispose();
-    _phoneController.dispose();
-    _tabController.dispose();
+    _otpController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    for (var controller in _securityAnswerControllers) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
-  void _dispatchRequestLinkEvent() {
-    if (_formKey.currentState!.validate()) {
-      String loginId;
-      if (_isPhoneSelected) {
-        if (_fullPhoneNumber == null || _fullPhoneNumber!.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please enter a valid phone number.')),
-          );
-          return;
-        }
-        loginId = _fullPhoneNumber!;
-      } else {
-        loginId = _emailController.text.trim();
-      }
+  void _showToast(String message, {bool isError = false}) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_LONG,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: isError ? Colors.red : Colors.green,
+      textColor: Colors.white,
+      fontSize: 16.0,
+    );
+  }
 
-      context
-          .read<PasswordResetRequestBloc>()
-          .add(PasswordResetLinkRequested(loginId: loginId));
+  void _handleNextStep() {
+    final bloc = context.read<PasswordResetBloc>();
+    switch (_currentStep) {
+      case 0:
+        if (_emailFormKey.currentState!.validate()) {
+          bloc.add(PasswordResetOtpRequested(
+              dto: PasswordResetRequestOtpDto(email: _emailController.text)));
+        }
+        break;
+      case 1:
+        if (_otpController.text.length == 6) {
+          bloc.add(PasswordResetOtpVerified(
+              dto: VerifyPasswordResetOtpDto(
+                  email: _emailController.text, otp: _otpController.text)));
+        } else {
+          _showToast("OTP must be 6 digits.", isError: true);
+        }
+        break;
+      case 2:
+        if (_securityQuestionsFormKey.currentState!.validate()) {
+          final answers = <SecurityAnswerDto>[];
+          for (int i = 0; i < _securityQuestions.length; i++) {
+            answers.add(SecurityAnswerDto(
+              questionId: _securityQuestions[i].id,
+              answer: _securityAnswerControllers[i].text.trim().toLowerCase(),
+            ));
+          }
+          bloc.add(PasswordResetAnswersVerified(
+              dto: VerifySecurityAnswersDto(
+                  email: _emailController.text, answers: answers)));
+        }
+        break;
+      case 3:
+        if (_passwordFormKey.currentState!.validate()) {
+          bloc.add(PasswordResetSubmitted(
+              dto: ResetPasswordWithTokenDto(
+                  token: _resetToken!, newPassword: _passwordController.text)));
+        }
+        break;
     }
   }
 
@@ -82,293 +119,276 @@ class _ForgotPasswordRequestScreenState
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        title: const Text('Password Reset'),
         backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
-          'Forgot Password',
-          style: TextStyle(color: Colors.white, fontFamily: 'Poppins'),
-        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.pop(),
         ),
       ),
-      body: BlocListener<PasswordResetRequestBloc, PasswordResetRequestState>(
+      body: BlocListener<PasswordResetBloc, PasswordResetState>(
         listener: (context, state) {
-          if (state is PasswordResetRequestLoading) {
-            setState(() {
-              _isLoading = true;
-            });
-          } else if (state is PasswordResetRequestSuccess) {
-            setState(() {
-              _isLoading = false;
-            });
+          setState(() => _isLoading = state is PasswordResetLoading);
 
-            // Get the loginId used for the request
-            final loginId = _isPhoneSelected
-                ? _fullPhoneNumber!
-                : _emailController.text.trim();
-
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message), // Show confirmation message
-                backgroundColor: Colors.green,
-              ),
-            );
-
-            // Navigate to ResetPasswordScreen, passing only the loginId
-            Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) =>
-                  ResetPasswordScreen(loginId: loginId), // Pass loginId
-            ));
-          } else if (state is PasswordResetRequestFailure) {
+          if (state is PasswordResetFailure) {
+            _showToast(state.failure.message, isError: true);
+          } else if (state is PasswordResetOtpSent) {
+            _showToast("An OTP has been sent to your email.");
+            setState(() => _currentStep = 1);
+          } else if (state is PasswordResetQuestionsLoaded) {
+            _showToast("OTP Verified. Please answer your questions.");
             setState(() {
-              _isLoading = false;
+              _securityQuestions = state.questions;
+              _securityAnswerControllers = List.generate(
+                  state.questions.length, (_) => TextEditingController());
+              _currentStep = 2;
             });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.failure.message),
-                backgroundColor: Colors.red,
-              ),
-            );
-          } else {
-            if (_isLoading) {
-              setState(() {
-                _isLoading = false;
-              });
-            }
+          } else if (state is PasswordResetTokenLoaded) {
+            _showToast("Security questions verified.");
+            setState(() {
+              _resetToken = state.token;
+              _currentStep = 3;
+            });
+          } else if (state is PasswordResetSuccess) {
+            _showToast(state.message);
+            context.go('/userLogin');
           }
         },
-        child: SafeArea(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+        child: Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme:
+                Theme.of(context).colorScheme.copyWith(primary: primaryColor),
+          ),
+          child: Stepper(
+            type: StepperType.vertical,
+            currentStep: _currentStep,
+            onStepTapped: (step) {
+              if (step < _currentStep) {
+                setState(() => _currentStep = step);
+              }
+            },
+            controlsBuilder: (context, details) {
+              return Padding(
+                padding: const EdgeInsets.only(top: 24.0),
+                child: Row(
                   children: [
-                    const SizedBox(height: 40),
-                    Icon(
-                      Icons.lock_reset_outlined,
-                      size: 80,
-                      color: primaryColor,
-                    ),
-                    const SizedBox(height: 30),
-                    const Text(
-                      'Reset Your Password',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Poppins',
-                        color: Color(0xFF0A1C40),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Select Email or Phone Number to receive your password reset instructions.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.black54,
-                        fontFamily: 'Poppins',
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              _tabController.animateTo(0);
-                            },
-                            child: Container(
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: _tabController.index == 0
-                                    ? const Color(0xFF0A1C40)
-                                    : Colors.grey.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  "Phone Number",
-                                  style: TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontWeight: FontWeight.w600,
-                                    color: _tabController.index == 0
-                                        ? Colors.white
-                                        : Colors.grey,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
+                    if (_currentStep > 0)
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _isLoading ? null : details.onStepCancel,
+                          child: const Text('Back'),
+                          style: OutlinedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(50),
+                              side: BorderSide(color: Colors.grey.shade300)),
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              _tabController.animateTo(1);
-                            },
-                            child: Container(
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: _tabController.index == 1
-                                    ? const Color(0xFF0A1C40)
-                                    : Colors.grey.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  "Email",
-                                  style: TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontWeight: FontWeight.w600,
-                                    color: _tabController.index == 1
-                                        ? Colors.white
-                                        : Colors.grey,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 30),
-                    _isPhoneSelected ? _buildPhoneField() : _buildEmailField(),
-                    const SizedBox(height: 40),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 55,
+                      ),
+                    if (_currentStep > 0) const SizedBox(width: 12),
+                    Expanded(
                       child: ElevatedButton(
-                        onPressed:
-                            _isLoading ? null : _dispatchRequestLinkEvent,
+                        onPressed: _isLoading ? null : _handleNextStep,
                         style: ElevatedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(50),
                           backgroundColor: primaryColor,
                           foregroundColor: Colors.white,
-                          disabledBackgroundColor: Colors.grey,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
                         ),
                         child: _isLoading
                             ? const SizedBox(
-                                width: 24,
                                 height: 24,
+                                width: 24,
                                 child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 3,
-                                ),
-                              )
-                            : const Text(
-                                'Send Instructions',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  fontFamily: 'Poppins',
-                                ),
-                              ),
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    Container(
-                      width: 60,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0A1C40),
-                        borderRadius: BorderRadius.circular(2),
+                                    color: Colors.white, strokeWidth: 3))
+                            : Text(_currentStep == 3
+                                ? 'Reset Password'
+                                : 'Continue'),
                       ),
                     ),
                   ],
                 ),
+              );
+            },
+            steps: [
+              _buildStep(
+                title: 'Enter Your Email',
+                stepIndex: 0,
+                content: Form(
+                  key: _emailFormKey,
+                  child: TextFormField(
+                    controller: _emailController,
+                    decoration: _buildInputDecoration(
+                        label: 'Email Address', context: context),
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (val) => val!.isEmpty || !val.contains('@')
+                        ? 'Enter a valid email'
+                        : null,
+                  ),
+                ),
               ),
-            ),
+              _buildStep(
+                  title: 'Verify OTP',
+                  stepIndex: 1,
+                  content: Column(
+                    children: [
+                      Text(
+                          "Enter the 6-digit code sent to ${_emailController.text}",
+                          textAlign: TextAlign.center),
+                      const SizedBox(height: 24),
+                      Pinput(
+                        controller: _otpController,
+                        length: 6,
+                        defaultPinTheme:
+                            _buildPinTheme(ffTheme.primary.withOpacity(0.1)),
+                        focusedPinTheme:
+                            _buildPinTheme(ffTheme.primary.withOpacity(0.3))
+                                .copyWith(
+                          decoration:
+                              _buildPinTheme(ffTheme.primary.withOpacity(0.3))
+                                  .decoration!
+                                  .copyWith(
+                                    border: Border.all(color: ffTheme.primary),
+                                  ),
+                        ),
+                      ),
+                    ],
+                  )),
+              _buildStep(
+                  title: 'Answer Security Questions',
+                  stepIndex: 2,
+                  content: Form(
+                      key: _securityQuestionsFormKey,
+                      child: _securityQuestions.isEmpty
+                          ? const Center(
+                              child: Padding(
+                                  padding: EdgeInsets.all(16.0),
+                                  child: Text("Verifying OTP...")))
+                          : ListView.separated(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: _securityQuestions.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 20),
+                              itemBuilder: (context, index) => TextFormField(
+                                controller: _securityAnswerControllers[index],
+                                decoration: _buildInputDecoration(
+                                    label: _securityQuestions[index].question,
+                                    context: context),
+                                validator: (val) => val!.isEmpty
+                                    ? 'Please provide an answer'
+                                    : null,
+                              ),
+                            ))),
+              _buildStep(
+                  title: 'Set New Password',
+                  stepIndex: 3,
+                  content: Form(
+                      key: _passwordFormKey,
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _passwordController,
+                            obscureText: !_isNewPasswordVisible,
+                            decoration: _buildInputDecoration(
+                              label: 'New Password',
+                              context: context,
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _isNewPasswordVisible
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                  color: Colors.grey.shade600,
+                                ),
+                                onPressed: () => setState(() =>
+                                    _isNewPasswordVisible =
+                                        !_isNewPasswordVisible),
+                              ),
+                            ),
+                            validator: (val) => val!.length < 6
+                                ? 'Password must be at least 6 characters'
+                                : null,
+                          ),
+                          const SizedBox(height: 20),
+                          TextFormField(
+                            controller: _confirmPasswordController,
+                            obscureText: !_isConfirmPasswordVisible,
+                            decoration: _buildInputDecoration(
+                              label: 'Confirm New Password',
+                              context: context,
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _isConfirmPasswordVisible
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                  color: Colors.grey.shade600,
+                                ),
+                                onPressed: () => setState(() =>
+                                    _isConfirmPasswordVisible =
+                                        !_isConfirmPasswordVisible),
+                              ),
+                            ),
+                            validator: (val) => val != _passwordController.text
+                                ? 'Passwords do not match'
+                                : null,
+                          ),
+                        ],
+                      ))),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildEmailField() {
-    final primaryColor = FlutterFlowTheme.of(context).primary;
-    return TextFormField(
-      controller: _emailController,
-      keyboardType: TextInputType.emailAddress,
-      decoration: InputDecoration(
-        labelText: 'Email Address',
-        hintText: 'Enter your email',
-        prefixIcon: const Icon(Icons.email_outlined, color: Colors.grey),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: primaryColor, width: 2),
-        ),
-        filled: true,
-        fillColor: Colors.grey.shade100,
+  Step _buildStep(
+      {required String title,
+      required int stepIndex,
+      required Widget content}) {
+    final ffTheme = FlutterFlowTheme.of(context);
+    return Step(
+      title: Text(title,
+          style: TextStyle(
+              color:
+                  _currentStep == stepIndex ? ffTheme.primary : Colors.black87,
+              fontWeight: _currentStep == stepIndex
+                  ? FontWeight.bold
+                  : FontWeight.normal)),
+      content: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: content,
       ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return "Please enter your email";
-        }
-        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-          return "Please enter a valid email";
-        }
-        return null;
-      },
+      isActive: _currentStep >= stepIndex,
+      state: _currentStep > stepIndex ? StepState.complete : StepState.indexed,
     );
   }
 
-  Widget _buildPhoneField() {
-    final primaryColor = FlutterFlowTheme.of(context).primary;
-    return IntlPhoneField(
-      controller: _phoneController,
-      decoration: InputDecoration(
-        labelText: 'Phone Number',
-        hintText: 'Enter your phone number',
-        border: OutlineInputBorder(
+  InputDecoration _buildInputDecoration({
+    required String label,
+    required BuildContext context,
+    Widget? suffixIcon,
+  }) {
+    final ffTheme = FlutterFlowTheme.of(context);
+    return InputDecoration(
+      labelText: label,
+      labelStyle: TextStyle(color: Colors.grey.shade600),
+      alignLabelWithHint: true,
+      suffixIcon: suffixIcon,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: primaryColor, width: 2),
-        ),
-        filled: true,
-        fillColor: Colors.grey.shade100,
-      ).copyWith(counterText: ''),
-      initialCountryCode: 'ZW',
-      keyboardType: TextInputType.phone,
-      onChanged: (PhoneNumber phone) {
-        setState(() {
-          _fullPhoneNumber = phone.completeNumber;
-        });
-      },
-      validator: (PhoneNumber? phone) {
-        if (phone == null || phone.number.isEmpty) {
-          return 'Please enter your phone number';
-        }
-        return null;
-      },
-      dropdownTextStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 16),
-      style: const TextStyle(fontFamily: 'Poppins', fontSize: 16),
-      flagsButtonPadding: const EdgeInsets.only(left: 16),
-      dropdownIconPosition: IconPosition.trailing,
-      dropdownIcon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+          borderSide: BorderSide(color: ffTheme.primary, width: 2)),
+    );
+  }
+
+  PinTheme _buildPinTheme(Color fillColor) {
+    return PinTheme(
+      width: 56,
+      height: 56,
+      textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+      decoration: BoxDecoration(
+        color: fillColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.transparent),
+      ),
     );
   }
 }

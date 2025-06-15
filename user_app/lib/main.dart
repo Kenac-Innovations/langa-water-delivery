@@ -12,13 +12,9 @@ import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_event.dart';
 import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_state.dart';
 import 'package:langas_user/bloc/auth/login_bloc/login_bloc_bloc.dart';
 import 'package:langas_user/bloc/auth/password_reset_bloc/password_reset_bloc_bloc.dart';
-import 'package:langas_user/bloc/auth/password_reset_request/password_reset_request_bloc_bloc.dart';
 import 'package:langas_user/bloc/auth/register_bloc/register_bloc_bloc.dart';
-import 'package:langas_user/bloc/auth/verify_account_bloc/verify_account_bloc_bloc.dart';
 import 'package:langas_user/repository/auth_repository.dart';
-import 'package:langas_user/repository/delivery_repository.dart';
-import 'package:langas_user/repository/driver_repository.dart';
-import 'package:langas_user/repository/notification_repository.dart';
+
 import 'package:langas_user/services/fcm_service.dart';
 import 'package:langas_user/services/firebase_driver_service.dart';
 import 'package:langas_user/services/geolocation.dart';
@@ -52,9 +48,6 @@ void main() async {
       baseUrl: ApiConstants.baseUrl, storageService: secureStorageService);
   final authRepository = AuthRepository(
       dioClient: dioClient, storageService: secureStorageService);
-  final deliveryRepository = DeliveryRepository(dioClient: dioClient);
-  final driverRepository = DriverRepository(dioClient: dioClient);
-  final notificationRepository = NotificationRepository(dioClient: dioClient);
   final geolocationService = GeolocationService();
   final firebaseDriverService = FirebaseDriverService();
 
@@ -72,9 +65,6 @@ void main() async {
         RepositoryProvider.value(value: secureStorageService),
         RepositoryProvider.value(value: dioClient),
         RepositoryProvider.value(value: authRepository),
-        RepositoryProvider.value(value: deliveryRepository),
-        RepositoryProvider.value(value: driverRepository),
-        RepositoryProvider.value(value: notificationRepository),
         RepositoryProvider.value(value: geolocationService),
         RepositoryProvider.value(value: fcmService),
         RepositoryProvider.value(value: firebaseDriverService),
@@ -95,16 +85,6 @@ void main() async {
           ),
           BlocProvider<RegisterBloc>(
             create: (context) => RegisterBloc(
-              authRepository: context.read<AuthRepository>(),
-            ),
-          ),
-          BlocProvider<VerifyAccountBloc>(
-            create: (context) => VerifyAccountBloc(
-              authRepository: context.read<AuthRepository>(),
-            ),
-          ),
-          BlocProvider<PasswordResetRequestBloc>(
-            create: (context) => PasswordResetRequestBloc(
               authRepository: context.read<AuthRepository>(),
             ),
           ),

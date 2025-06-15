@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:langas_user/services/secure_storage.dart';
 import 'package:langas_user/util/api_constants.dart';
 import 'package:langas_user/util/api_failure_models.dart';
+import 'dart:convert';
 
 class _AuthInterceptor extends Interceptor {
   final SecureStorageService _storageService;
@@ -14,9 +15,15 @@ class _AuthInterceptor extends Interceptor {
     final excludedPaths = [
       ApiConstants.login,
       ApiConstants.register,
-      ApiConstants.verifyAccount,
-      ApiConstants.requestPasswordLink,
+      ApiConstants.requestOtp,
+      ApiConstants.validateOtp,
+      ApiConstants.getRandomSecurityQuestions,
+      ApiConstants.requestPasswordResetOtp,
+      ApiConstants.verifyPasswordResetOtp,
+      ApiConstants.verifySecurityAnswers,
+      ApiConstants.resetPasswordWithToken,
     ];
+
     if (!excludedPaths.contains(options.path)) {
       final String? token = await _storageService.getAccessToken();
       if (token != null && token.isNotEmpty) {
@@ -67,26 +74,40 @@ class DioClient {
     if (error is DioException) {
       if (error.response != null) {
         final statusCode = error.response?.statusCode;
-        final errorData = error.response?.data;
+        var errorData = error.response?.data;
         String errorMessage = 'An unexpected error occurred.';
 
-        if (errorData is Map<String, dynamic>) {
-          if (errorData.containsKey('success') &&
-              errorData['success'] == false &&
-              errorData.containsKey('data') &&
-              errorData['data'] is Map) {
-            final nestedData = errorData['data'] as Map<String, dynamic>;
-            if (nestedData.containsKey('message')) {
-              errorMessage = nestedData['message'] ?? errorMessage;
-            } else if (errorData.containsKey('message')) {
-              errorMessage = errorData['message'] ?? errorMessage;
-            }
-          } else if (errorData.containsKey('message')) {
-            errorMessage = errorData['message'] ?? errorMessage;
+        // --- Start of new, more robust parsing logic ---
+
+        Map<String, dynamic>? dataMap;
+        if (errorData is String) {
+          try {
+            dataMap = json.decode(errorData) as Map<String, dynamic>;
+          } catch (_) {
+            errorMessage = errorData;
+            dataMap = null;
           }
-        } else if (errorData is String && errorData.isNotEmpty) {
-          errorMessage = errorData;
+        } else if (errorData is Map<String, dynamic>) {
+          dataMap = errorData;
         }
+
+        if (dataMap != null) {
+          // Check for the nested message structure first
+          if (dataMap['data'] is Map && dataMap['data']['message'] != null) {
+            errorMessage = dataMap['data']['message'];
+            // Clean the prefix from the nested message
+            const prefix = "An unexpected error occurred: ";
+            if (errorMessage.startsWith(prefix)) {
+              errorMessage = errorMessage.substring(prefix.length);
+            }
+          }
+          // Fallback to the top-level message if the nested one isn't there
+          else if (dataMap['message'] != null) {
+            errorMessage = dataMap['message'];
+          }
+        }
+
+        // --- End of new logic ---
 
         if (errorMessage == 'An unexpected error occurred.') {
           if (statusCode == 403) {
