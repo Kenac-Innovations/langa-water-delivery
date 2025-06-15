@@ -1,148 +1,96 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_google_places_hoc081098/flutter_google_places_hoc081098.dart';
-import 'package:flutter_google_places_hoc081098/google_maps_webservice_places.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'package:google_api_headers/google_api_headers.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:langas_user/flutter_flow/nav/nav.dart';
+import 'package:go_router/go_router.dart';
+import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_bloc.dart';
+import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_state.dart';
+import 'package:langas_user/flutter_flow/flutter_flow_icon_button.dart';
+import 'package:langas_user/flutter_flow/flutter_flow_theme.dart';
+import 'package:langas_user/models/user_model.dart';
 import 'package:langas_user/pages/drawer/drawer_widget.dart';
-import 'package:langas_user/pages/home_page/map_widgets.dart';
-import 'package:langas_user/pages/home_page/ui_componets.dart';
-import 'package:langas_user/services/geolocation.dart';
-import 'package:langas_user/util/api_constants.dart';
-import '../../flutter_flow/flutter_flow_icon_button.dart';
-import '../../flutter_flow/flutter_flow_theme.dart';
 
-class HomeScreenPage extends StatefulWidget {
-  const HomeScreenPage({Key? key}) : super(key: key);
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
 
   @override
-  _HomeScreenPageState createState() => _HomeScreenPageState();
+  State<HomePage> createState() => _HomePageState();
 }
 
-class _HomeScreenPageState extends State<HomeScreenPage> {
-  String googleApikey = ApiConstants.googleApiKey;
-  GoogleMapController? mapController;
-  CameraPosition? cameraPosition;
-
-  LatLng currentLatLng = const LatLng(-17.8252, 31.0335);
-  String currentLocationString = "Loading location...";
-  final List<Marker> _markers = <Marker>[];
-  bool _isLoadingLocation = true;
-  bool _isProcessingAction = false;
-
+class _HomePageState extends State<HomePage> {
   final scaffoldKey = GlobalKey<ScaffoldState>();
-  bool isSelectedInstant = false;
-  bool isSelectedScheduled = false;
-
-  late GeolocationService _geolocationService;
+  User? _currentUser;
+  bool _isFabExtended = true;
 
   @override
   void initState() {
     super.initState();
-    _geolocationService = context.read<GeolocationService>();
-    _initializeLocation();
-  }
-
-  @override
-  void dispose() {
-    mapController?.dispose();
-    super.dispose();
-  }
-
-  Future<void> _initializeLocation() async {
-    if (!mounted) return;
-    setState(() {
-      _isLoadingLocation = true;
-      currentLocationString = "Fetching location...";
-    });
-    await _updateLocation(animateCamera: false);
-    if (mounted) {
-      setState(() {
-        _isLoadingLocation = false;
-      });
+    final authState = context.read<AuthBloc>().state;
+    if (authState is Authenticated) {
+      _currentUser = authState.user;
     }
-  }
-
-  Future<void> _updateLocation({bool animateCamera = false}) async {
-    try {
-      Position? position = await _geolocationService.getCurrentLocation();
-      if (!mounted) return;
-
-      if (position != null) {
-        final newLatLng = LatLng(position.latitude, position.longitude);
-        String address = "Address lookup failed";
-        try {
-          address = await _geolocationService.getAddressFromCoordinates(
-              position.latitude, position.longitude);
-        } catch (addrErr) {
-          debugPrint(
-              "[HomeScreenPage] _updateLocation: Error getting address: $addrErr");
-        }
-
-        setState(() {
-          currentLatLng = newLatLng;
-          currentLocationString =
-              address.isNotEmpty ? address : "Current Location";
-        });
-
-        if (mapController != null) {
-          final cameraUpdate = CameraUpdate.newCameraPosition(
-            CameraPosition(target: newLatLng, zoom: 16.0),
-          );
-          if (animateCamera) {
-            mapController!.animateCamera(cameraUpdate);
-          } else {
-            mapController!.moveCamera(cameraUpdate);
-          }
-        }
-      } else {
-        setState(() {
-          currentLocationString = "Could not get location";
-        });
-        _showErrorToast(
-            "Could not access your location. Please ensure location services and permissions are enabled.");
-      }
-    } catch (e) {
-      debugPrint("Error updating location: $e");
-      if (mounted) {
-        setState(() {
-          currentLocationString = "Error getting location";
-        });
-        _showErrorToast("Error getting location. Please try again.");
-      }
-    }
-  }
-
-  void _showErrorToast(String message) {
-    Fluttertoast.showToast(
-        msg: message,
-        toastLength: Toast.LENGTH_LONG,
-        gravity: ToastGravity.BOTTOM,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-        fontSize: 16.0);
   }
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async => false,
-      child: Scaffold(
-        key: scaffoldKey,
-        drawer: const AppDrawer(),
-        appBar: _buildAppBar(),
-        body: _buildMapContent(),
+    return Scaffold(
+      key: scaffoldKey,
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
+      drawer: const AppDrawer(),
+      appBar: _buildAppBar(),
+      body: NotificationListener<UserScrollNotification>(
+        onNotification: (notification) {
+          final Direction = notification.direction;
+          if (Direction == ScrollDirection.reverse) {
+            if (_isFabExtended) setState(() => _isFabExtended = false);
+          } else if (Direction == ScrollDirection.forward) {
+            if (!_isFabExtended) setState(() => _isFabExtended = true);
+          }
+          return true;
+        },
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(vertical: 16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDeliveryAddressCard(),
+              const SizedBox(height: 24),
+              _buildQuickActionsCard(),
+              const SizedBox(height: 24),
+              _buildPromotionsSection(),
+              const SizedBox(height: 24),
+              _buildSupportSection(),
+              const SizedBox(height: 80), // Extra space for FAB
+            ],
+          ),
+        ),
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: _isFabExtended
+          ? FloatingActionButton.extended(
+              onPressed: () => context.pushNamed('Create_Delivery'),
+              backgroundColor: FlutterFlowTheme.of(context).primary,
+              foregroundColor: Colors.white,
+              elevation: 8,
+              icon: const Icon(Icons.water_drop, size: 24),
+              label: const Text(
+                'Create a New Order',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            )
+          : FloatingActionButton(
+              onPressed: () => context.pushNamed('Create_Delivery'),
+              backgroundColor: FlutterFlowTheme.of(context).primary,
+              foregroundColor: Colors.white,
+              elevation: 8,
+              child: const Icon(Icons.water_drop, size: 28),
+            ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
+  AppBar _buildAppBar() {
     return AppBar(
       backgroundColor: FlutterFlowTheme.of(context).primary,
+      elevation: 0,
       automaticallyImplyLeading: false,
       leading: FlutterFlowIconButton(
         borderColor: Colors.transparent,
@@ -152,190 +100,290 @@ class _HomeScreenPageState extends State<HomeScreenPage> {
         icon: const Icon(Icons.menu, color: Colors.white, size: 28.0),
         onPressed: () => scaffoldKey.currentState?.openDrawer(),
       ),
-      title: Text(
-        'Home',
-        style: FlutterFlowTheme.of(context).headlineMedium.override(
-              fontFamily: 'Poppins',
-              color: Colors.white,
-              fontSize: 18.0,
-              fontWeight: FontWeight.w600,
-            ),
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Welcome Back,',
+            style: FlutterFlowTheme.of(context)
+                .bodySmall
+                .override(fontFamily: 'Poppins', color: Colors.white70),
+          ),
+          Text(
+            _currentUser?.firstName ?? 'Guest',
+            style: FlutterFlowTheme.of(context).headlineSmall.override(
+                fontFamily: 'Poppins', fontSize: 20, color: Colors.white),
+          ),
+        ],
       ),
       actions: [
-        IconButton(
-          icon: const Icon(Icons.notifications_outlined, color: Colors.white),
-          onPressed: () => context.pushNamed('Notification'),
+        Padding(
+          padding: const EdgeInsets.only(right: 8.0),
+          child: IconButton(
+            icon: const Icon(Icons.notifications_outlined,
+                color: Colors.white, size: 28),
+            onPressed: () => context.pushNamed('Notification'),
+          ),
         ),
       ],
-      centerTitle: true,
-      elevation: 0,
+      centerTitle: false,
     );
   }
 
-  Widget _buildMapContent() {
-    return Stack(
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Text(
+        title,
+        style: FlutterFlowTheme.of(context)
+            .titleLarge
+            .override(fontFamily: 'Poppins', fontSize: 22),
+      ),
+    );
+  }
+
+  Widget _buildDeliveryAddressCard() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Card(
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.1),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Current Location',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      '789 Hydration Ave, San Francisco',
+                      style: TextStyle(fontSize: 14, color: Colors.black54),
+                    ),
+                    const SizedBox(height: 8),
+                    Card(
+                      color:
+                          FlutterFlowTheme.of(context).success.withOpacity(0.1),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8.0, vertical: 4.0),
+                        child: Text(
+                          'Service Available',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: FlutterFlowTheme.of(context).success,
+                              fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Icon(Icons.location_pin,
+                    size: 32, color: FlutterFlowTheme.of(context).primary),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActionsCard() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionHeader('Quick Actions'),
+          const SizedBox(height: 12),
+          Card(
+            elevation: 2,
+            shadowColor: Colors.black.withOpacity(0.1),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('5L Mineral Water',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 16)),
+                        const SizedBox(height: 4),
+                        const Text('789 Hydration Ave',
+                            style: TextStyle(color: Colors.black54)),
+                        const SizedBox(height: 8),
+                        const Text('\$12',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 16)),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          height: 36,
+                          child: ElevatedButton(
+                            onPressed: () {},
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  FlutterFlowTheme.of(context).primary,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                            ),
+                            child: const Text('Repeat Order'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.asset(
+                      'assets/images/water.jpg',
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPromotionsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // --- Simplified GoogleMap ---
-        GoogleMap(
-          initialCameraPosition: CameraPosition(
-            target: currentLatLng, // Use default or fetched location
-            zoom: 14.0, // Start with a reasonable zoom
-          ),
-          mapType: MapType.normal,
-          onMapCreated: (controller) {
-            print("--- Google Map Created ---"); // Check if this prints
-            mapController = controller;
-            // Move camera after map is created if location is ready
-            if (!_isLoadingLocation) {
-              mapController?.moveCamera(CameraUpdate.newCameraPosition(
-                  CameraPosition(target: currentLatLng, zoom: 16.0)));
-            }
-          },
-          myLocationEnabled: true, // Keep blue dot
-          myLocationButtonEnabled: false, // Keep custom button
-          // Temporarily remove other properties to test basic rendering
-          // onCameraMove: (CameraPosition cameraPositiona) {
-          //   cameraPosition = cameraPositiona;
-          // },
-          // markers: Set<Marker>.of(_markers),
-          // compassEnabled: true,
-          // zoomControlsEnabled: false,
-          // zoomGesturesEnabled: true,
-        ),
-        // --- End Simplified GoogleMap ---
-
-        // Keep other UI elements
-        MapWidgets.buildSearchBar(
-            context: context,
-            location: currentLocationString,
-            onTap: _handleSearchTap),
-
-        MapWidgets.buildBottomCard(
-          context: context,
-          isSelected: isSelectedInstant,
-          isSelected2: false,
-          isSelected3: isSelectedScheduled,
-          onInstantPressed: () {
-            setState(() {
-              isSelectedInstant = true;
-              isSelectedScheduled = false;
-            });
-            _navigateToInstantDelivery();
-          },
-        ),
-
-        Positioned(
-          bottom: 200,
-          right: 16,
-          child: FloatingActionButton(
-            mini: true,
-            backgroundColor: Colors.white,
-            onPressed: _isLoadingLocation || _isProcessingAction
-                ? null
-                : _goToCurrentLocation,
-            child: _isProcessingAction
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.blue)))
-                : const Icon(Icons.my_location, color: Colors.black54),
+        _buildSectionHeader('Promotions'),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 140,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: [
+              _buildPromoCard(
+                'Summer Special',
+                '20% off 20L+ orders',
+                const Color(0xFF4FD8C5),
+                'https://images.unsplash.com/photo-1554774853-719586f82d77?w=500&q=80',
+              ),
+              const SizedBox(width: 16),
+              _buildPromoCard(
+                'Referral Bonus',
+                '\$10 credit for referring a friend',
+                const Color(0xFF98D8B7),
+                'https://images.unsplash.com/photo-1594705598634-f8753e5834b3?w=500&q=80',
+              ),
+            ],
           ),
         ),
-
-        if (_isLoadingLocation)
-          Container(
-              color: Colors.white,
-              child: UIComponents.buildLoadingIndicator(context)),
-
-        UIComponents.buildProgressOverlay(
-            _isProcessingAction && !_isLoadingLocation)
       ],
     );
   }
 
-  Future<void> _handleSearchTap() async {
-    if (_isLoadingLocation || _isProcessingAction) return;
-
-    try {
-      var place = await PlacesAutocomplete.show(
-        context: context,
-        apiKey: googleApikey,
-        mode: Mode.overlay,
-        types: [],
-        strictbounds: false,
-        onError: (err) {
-          debugPrint("Places API error: ${err.errorMessage}");
-          _showErrorToast("Error searching places: ${err.errorMessage}");
-        },
-      );
-
-      if (place != null && mounted) {
-        setState(() {
-          currentLocationString = place.description.toString();
-          _isProcessingAction = true;
-        });
-
-        final plist = GoogleMapsPlaces(
-          apiKey: googleApikey,
-          apiHeaders: await const GoogleApiHeaders().getHeaders(),
-        );
-        String placeid = place.placeId ?? "0";
-        final detail = await plist.getDetailsByPlaceId(placeid);
-
-        if (!mounted) return;
-
-        if (detail.result.geometry != null) {
-          final geometry = detail.result.geometry!;
-          final lat = geometry.location.lat;
-          final lang = geometry.location.lng;
-          var newLatLng = LatLng(lat, lang);
-
-          setState(() {
-            currentLatLng = newLatLng;
-          });
-
-          mapController?.animateCamera(CameraUpdate.newCameraPosition(
-              CameraPosition(target: newLatLng, zoom: 17)));
-        } else {
-          _showErrorToast(
-              "Could not get location details for the selected place.");
-        }
-        setState(() {
-          _isProcessingAction = false;
-        });
-      }
-    } catch (e) {
-      debugPrint("Error in search tap: $e");
-      if (mounted) {
-        setState(() {
-          _isProcessingAction = false;
-        });
-        _showErrorToast("An error occurred during search.");
-      }
-    }
+  Widget _buildPromoCard(
+      String title, String subtitle, Color color, String imageUrl) {
+    return Container(
+      width: 250,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(16),
+        image: DecorationImage(
+          image: NetworkImage(imageUrl),
+          fit: BoxFit.cover,
+          colorFilter:
+              ColorFilter.mode(color.withOpacity(0.8), BlendMode.darken),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Text(title,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold)),
+            Text(subtitle,
+                style: const TextStyle(color: Colors.white, fontSize: 14)),
+          ],
+        ),
+      ),
+    );
   }
 
-  Future<void> _goToCurrentLocation() async {
-    setState(() => _isProcessingAction = true);
-    await _updateLocation(animateCamera: true);
-    if (mounted) {
-      setState(() => _isProcessingAction = false);
-    }
+  Widget _buildSupportSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionHeader('Support'),
+          const SizedBox(height: 12),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 2.5,
+            children: [
+              _buildSupportButton(
+                  'Live Chat', Icons.chat_bubble_outline, Colors.green),
+              _buildSupportButton('Callback Request',
+                  Icons.phone_in_talk_outlined, Colors.orange),
+              _buildSupportButton(
+                  'FAQ Search', Icons.quiz_outlined, Colors.blue),
+              _buildSupportButton('Emergency Contact',
+                  Icons.contact_phone_outlined, Colors.red),
+            ],
+          )
+        ],
+      ),
+    );
   }
 
-  void _navigateToInstantDelivery() {
-    if (_isLoadingLocation ||
-        (currentLatLng.latitude == -17.8252 &&
-            currentLatLng.longitude == 31.0335 &&
-            !currentLocationString.contains("Error"))) {
-      _showErrorToast("Please wait for location to load or select manually.");
-      return;
-    }
-    context.pushNamed('Create_Delivery', extra: {
-      'currentLocation': currentLocationString,
-      'latLng': currentLatLng
-    });
+  Widget _buildSupportButton(String label, IconData icon, Color color) {
+    return OutlinedButton.icon(
+      icon: Icon(icon, size: 20, color: color),
+      label: Text(label,
+          textAlign: TextAlign.center,
+          style: TextStyle(color: FlutterFlowTheme.of(context).primaryText)),
+      onPressed: () {},
+      style: OutlinedButton.styleFrom(
+        foregroundColor: color,
+        backgroundColor: color.withOpacity(0.05),
+        side: BorderSide(color: color.withOpacity(0.3)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 0,
+      ),
+    );
   }
 }

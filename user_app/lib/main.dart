@@ -12,23 +12,9 @@ import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_event.dart';
 import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_state.dart';
 import 'package:langas_user/bloc/auth/login_bloc/login_bloc_bloc.dart';
 import 'package:langas_user/bloc/auth/password_reset_bloc/password_reset_bloc_bloc.dart';
-import 'package:langas_user/bloc/auth/password_reset_request/password_reset_request_bloc_bloc.dart';
 import 'package:langas_user/bloc/auth/register_bloc/register_bloc_bloc.dart';
-import 'package:langas_user/bloc/auth/verify_account_bloc/verify_account_bloc_bloc.dart';
-import 'package:langas_user/bloc/deliveries/cancel_delivery_bloc/cancel_delivery_bloc_bloc.dart';
-import 'package:langas_user/bloc/deliveries/create_delivery_bloc/create_delivery_bloc_bloc.dart';
-import 'package:langas_user/bloc/deliveries/create_payment_bloc/create_payment_bloc_bloc.dart';
-import 'package:langas_user/bloc/deliveries/delete_delivery_bloc/delete_delivery_bloc_bloc.dart';
-import 'package:langas_user/bloc/deliveries/deliveries_bloc/deliveries_bloc_bloc.dart';
-import 'package:langas_user/bloc/deliveries/delivery_price_bloc/delivery_price_bloc_bloc.dart';
-import 'package:langas_user/bloc/deliveries/select_driver_bloc/select_driver_bloc_bloc.dart';
-import 'package:langas_user/bloc/deliveries/single_delivery_bloc/single_delivery_bloc_bloc.dart';
-import 'package:langas_user/bloc/drivers/active_drivers/available_drivers_bloc_bloc.dart';
-import 'package:langas_user/bloc/notification/notification_bloc_bloc.dart';
 import 'package:langas_user/repository/auth_repository.dart';
-import 'package:langas_user/repository/delivery_repository.dart';
-import 'package:langas_user/repository/driver_repository.dart';
-import 'package:langas_user/repository/notification_repository.dart';
+
 import 'package:langas_user/services/fcm_service.dart';
 import 'package:langas_user/services/firebase_driver_service.dart';
 import 'package:langas_user/services/geolocation.dart';
@@ -62,9 +48,6 @@ void main() async {
       baseUrl: ApiConstants.baseUrl, storageService: secureStorageService);
   final authRepository = AuthRepository(
       dioClient: dioClient, storageService: secureStorageService);
-  final deliveryRepository = DeliveryRepository(dioClient: dioClient);
-  final driverRepository = DriverRepository(dioClient: dioClient);
-  final notificationRepository = NotificationRepository(dioClient: dioClient);
   final geolocationService = GeolocationService();
   final firebaseDriverService = FirebaseDriverService();
 
@@ -82,9 +65,6 @@ void main() async {
         RepositoryProvider.value(value: secureStorageService),
         RepositoryProvider.value(value: dioClient),
         RepositoryProvider.value(value: authRepository),
-        RepositoryProvider.value(value: deliveryRepository),
-        RepositoryProvider.value(value: driverRepository),
-        RepositoryProvider.value(value: notificationRepository),
         RepositoryProvider.value(value: geolocationService),
         RepositoryProvider.value(value: fcmService),
         RepositoryProvider.value(value: firebaseDriverService),
@@ -108,69 +88,9 @@ void main() async {
               authRepository: context.read<AuthRepository>(),
             ),
           ),
-          BlocProvider<VerifyAccountBloc>(
-            create: (context) => VerifyAccountBloc(
-              authRepository: context.read<AuthRepository>(),
-            ),
-          ),
-          BlocProvider<PasswordResetRequestBloc>(
-            create: (context) => PasswordResetRequestBloc(
-              authRepository: context.read<AuthRepository>(),
-            ),
-          ),
           BlocProvider<PasswordResetBloc>(
             create: (context) => PasswordResetBloc(
               authRepository: context.read<AuthRepository>(),
-            ),
-          ),
-          BlocProvider<CreateDeliveryBloc>(
-            create: (context) => CreateDeliveryBloc(
-              deliveryRepository: context.read<DeliveryRepository>(),
-            ),
-          ),
-          BlocProvider<DeliveriesBloc>(
-            create: (context) => DeliveriesBloc(
-              deliveryRepository: context.read<DeliveryRepository>(),
-            ),
-          ),
-          BlocProvider<SingleDeliveryBloc>(
-            create: (context) => SingleDeliveryBloc(
-              deliveryRepository: context.read<DeliveryRepository>(),
-            ),
-          ),
-          BlocProvider<CancelDeliveryBloc>(
-            create: (context) => CancelDeliveryBloc(
-              deliveryRepository: context.read<DeliveryRepository>(),
-            ),
-          ),
-          BlocProvider<DeliveryPriceBloc>(
-            create: (context) => DeliveryPriceBloc(
-              deliveryRepository: context.read<DeliveryRepository>(),
-            ),
-          ),
-          BlocProvider<DeleteDeliveryBloc>(
-            create: (context) => DeleteDeliveryBloc(
-              deliveryRepository: context.read<DeliveryRepository>(),
-            ),
-          ),
-          BlocProvider<SelectDriverBloc>(
-            create: (context) => SelectDriverBloc(
-              deliveryRepository: context.read<DeliveryRepository>(),
-            ),
-          ),
-          BlocProvider<CreatePaymentBloc>(
-            create: (context) => CreatePaymentBloc(
-              deliveryRepository: context.read<DeliveryRepository>(),
-            ),
-          ),
-          BlocProvider<AvailableDriversBloc>(
-            create: (context) => AvailableDriversBloc(
-              firebaseDriverService: context.read<FirebaseDriverService>(),
-            ),
-          ),
-          BlocProvider<NotificationBloc>(
-            create: (context) => NotificationBloc(
-              notificationRepository: context.read<NotificationRepository>(),
             ),
           ),
         ],

@@ -1,23 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:go_router/go_router.dart';
-import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_bloc.dart';
-import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_state.dart';
-import 'package:langas_user/bloc/deliveries/deliveries_bloc/deliveries_bloc_bloc.dart';
-import 'package:langas_user/bloc/deliveries/deliveries_bloc/deliveries_bloc_event.dart';
-import 'package:langas_user/bloc/deliveries/deliveries_bloc/deliveries_bloc_state.dart';
 import 'package:langas_user/models/delivery_model.dart';
 import 'package:langas_user/util/apps_enums.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
-import '/flutter_flow/flutter_flow_util.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
 class DeliveryHistoryWidget extends StatefulWidget {
-  const DeliveryHistoryWidget({super.key});
+  final List<Delivery>? deliveries;
+  final bool isLoading;
+  final bool isLoadingMore;
+  final String? error;
+  final Future<void> Function()? onRefresh;
+  final Function()? onScrollToEnd;
+
+  const DeliveryHistoryWidget({
+    super.key,
+    this.deliveries,
+    this.isLoading = false,
+    this.isLoadingMore = false,
+    this.error,
+    this.onRefresh,
+    this.onScrollToEnd,
+  });
 
   @override
   State<DeliveryHistoryWidget> createState() => _DeliveryHistoryWidgetState();
@@ -28,56 +35,17 @@ class _DeliveryHistoryWidgetState extends State<DeliveryHistoryWidget> {
   final unfocusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
 
-  String? _clientId;
-  List<Delivery> _deliveries = [];
-  int _currentPage = 0;
-  int _totalPages = 1; // Assume at least one page initially
-  bool _isLastPage = false;
-  bool _isLoadingMore = false;
-
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    final authState = context.read<AuthBloc>().state;
-    if (authState is Authenticated) {
-      _clientId = authState.user.userId.toString();
-      _fetchHistory(page: 1, isRefresh: true);
-    } else {
-      print("Error: User not authenticated in DeliveryHistoryWidget");
-    }
-  }
-
-  void _fetchHistory({required int page, bool isRefresh = false}) {
-    if (_clientId != null) {
-      context.read<DeliveriesBloc>().add(
-            FetchDeliveriesRequested(
-              clientId: _clientId!,
-              isHistory: true,
-              pageNumber: page,
-              pageSize: 15, // Adjust page size as needed
-            ),
-          );
-      if (isRefresh) {
-        // Reset state on refresh
-        setState(() {
-          _deliveries = [];
-          _currentPage = 1;
-          _isLastPage = false;
-        });
-      }
-    }
   }
 
   void _onScroll() {
     if (_scrollController.position.pixels >=
             _scrollController.position.maxScrollExtent - 200 &&
-        !_isLoadingMore &&
-        !_isLastPage) {
-      setState(() {
-        _isLoadingMore = true;
-      });
-      _fetchHistory(page: _currentPage + 1);
+        !widget.isLoadingMore) {
+      widget.onScrollToEnd!();
     }
   }
 
@@ -98,22 +66,6 @@ class _DeliveryHistoryWidgetState extends State<DeliveryHistoryWidget> {
       default:
         return FlutterFlowTheme.of(context).secondaryText;
     }
-  }
-
-  void _showToast(String message, {required bool success}) {
-    Fluttertoast.showToast(
-        msg: message,
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        backgroundColor: success ? Colors.green : Colors.red,
-        textColor: Colors.white,
-        fontSize: 16.0);
-  }
-
-  void _showRatingDialog(Delivery delivery) {
-    // Implement rating dialog if needed for history items
-    _showToast("Rating functionality not implemented for history.",
-        success: false);
   }
 
   @override
@@ -171,7 +123,7 @@ class _DeliveryHistoryWidgetState extends State<DeliveryHistoryWidget> {
                 color: FlutterFlowTheme.of(context).info,
                 size: 24.0,
               ),
-              onPressed: () => _fetchHistory(page: 0, isRefresh: true),
+              onPressed: widget.onRefresh,
             ),
           ],
           centerTitle: true,
@@ -179,48 +131,23 @@ class _DeliveryHistoryWidgetState extends State<DeliveryHistoryWidget> {
         ),
         body: SafeArea(
           top: true,
-          child: BlocConsumer<DeliveriesBloc, DeliveriesState>(
-              listener: (context, state) {
-            if (state is DeliveriesSuccess) {
-              setState(() {
-                // Append new items, avoid duplicates
-                final newDeliveries = state.response.content
-                    .where((newDelivery) => !_deliveries.any((existing) =>
-                        existing.deliveryId == newDelivery.deliveryId))
-                    .toList();
-                _deliveries.addAll(newDeliveries);
-                _currentPage = state.response.pagination.pageNumber;
-                _totalPages = state.response.pagination.totalPages;
-                _isLastPage = (_currentPage + 1) >= _totalPages;
-                _isLoadingMore = false;
-              });
-            } else if (state is DeliveriesFailure) {
-              _showToast("Error loading history: ${state.failure.message}",
-                  success: false);
-              setState(() {
-                _isLoadingMore = false;
-              });
-            } else if (state is DeliveriesLoading && _deliveries.isEmpty) {
-              // Handled by builder
-            } else if (state is DeliveriesLoading && _deliveries.isNotEmpty) {
-              setState(() {
-                _isLoadingMore = true;
-              }); // Show loading indicator at bottom
-            }
-          }, builder: (context, state) {
-            if (state is DeliveriesLoading && _deliveries.isEmpty) {
-              return _buildLoadingIndicator();
-            } else if (state is DeliveriesFailure && _deliveries.isEmpty) {
-              return _buildErrorState(state.failure.message);
-            } else if (_deliveries.isEmpty && state is! DeliveriesLoading) {
-              return _buildEmptyState();
-            } else {
-              return _buildDeliveriesList();
-            }
-          }),
+          child: _buildBody(),
         ),
       ),
     );
+  }
+
+  Widget _buildBody() {
+    if (widget.isLoading && widget.deliveries!.isEmpty) {
+      return _buildLoadingIndicator();
+    }
+    if (widget.error != null && widget.deliveries!.isEmpty) {
+      return _buildErrorState(widget.error!);
+    }
+    if (widget.deliveries!.isEmpty) {
+      return _buildEmptyState();
+    }
+    return _buildDeliveriesList();
   }
 
   Widget _buildLoadingIndicator() {
@@ -254,7 +181,7 @@ class _DeliveryHistoryWidgetState extends State<DeliveryHistoryWidget> {
           ElevatedButton.icon(
             icon: const Icon(Icons.refresh),
             label: const Text('Retry'),
-            onPressed: () => _fetchHistory(page: 0, isRefresh: true),
+            onPressed: widget.onRefresh,
             style: ElevatedButton.styleFrom(
               backgroundColor: FlutterFlowTheme.of(context).primary,
               foregroundColor: Colors.white,
@@ -267,19 +194,21 @@ class _DeliveryHistoryWidgetState extends State<DeliveryHistoryWidget> {
 
   Widget _buildDeliveriesList() {
     return RefreshIndicator(
-      onRefresh: () async => _fetchHistory(page: 0, isRefresh: true),
+      onRefresh: (){
+        return widget.onRefresh!();
+      },
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0.0),
         child: ListView.builder(
             controller: _scrollController,
             padding: EdgeInsets.zero,
-            itemCount: _deliveries.length +
-                (_isLoadingMore ? 1 : 0), // Add space for loader
+            itemCount:
+                widget.deliveries!.length + (widget.isLoadingMore ? 1 : 0),
             itemBuilder: (context, index) {
-              if (index == _deliveries.length) {
+              if (index == widget.deliveries?.length) {
                 return _buildPaginationLoadingIndicator();
               }
-              return _buildDeliveryCard(_deliveries[index]);
+              return _buildDeliveryCard(widget.deliveries![index]);
             }),
       ),
     );
@@ -337,11 +266,7 @@ class _DeliveryHistoryWidgetState extends State<DeliveryHistoryWidget> {
     String statusText = delivery.deliveryStatus.name.replaceAll('_', ' ');
     statusText =
         statusText[0].toUpperCase() + statusText.substring(1).toLowerCase();
-    String formattedDate = "Date N/A"; // Default
-    // Assuming deliveryDate is available and needs formatting
-    // if (delivery.deliveryDate != null) {
-    //    formattedDate = DateFormat('MMM dd, yyyy • hh:mm a').format(delivery.deliveryDate!);
-    // }
+    String formattedDate = "Date N/A";
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
@@ -403,7 +328,7 @@ class _DeliveryHistoryWidgetState extends State<DeliveryHistoryWidget> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            formattedDate, // Use formatted date
+                            formattedDate,
                             style: FlutterFlowTheme.of(context).bodyMedium,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -519,25 +444,10 @@ class _DeliveryHistoryWidgetState extends State<DeliveryHistoryWidget> {
                   ],
                 ),
               ),
-              // Rating Section (Optional for History)
-              // if (delivery.deliveryStatus == DeliveryStatus.COMPLETED) ...[
-              //    const SizedBox(height: 16),
-              //    _buildRatingSection(delivery),
-              // ]
             ],
           ),
         ),
       ),
     );
   }
-
-  // Widget _buildRatingSection(Delivery delivery) {
-  //    // Placeholder - Adapt rating logic if needed for history
-  //    bool isRated = false; // Check if user has rated this specific delivery
-  //    double currentRating = 0.0; // Get stored rating if available
-
-  //    return isRated
-  //      ? Container(...) // Display existing rating
-  //      : ElevatedButton.icon(...); // Show rate button
-  // }
 }

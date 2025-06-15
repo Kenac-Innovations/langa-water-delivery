@@ -1,20 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter/services.dart';
-import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_bloc.dart';
-import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_state.dart';
-import 'package:langas_user/bloc/deliveries/cancel_delivery_bloc/cancel_delivery_bloc_bloc.dart';
-import 'package:langas_user/bloc/deliveries/cancel_delivery_bloc/cancel_delivery_bloc_event.dart';
-import 'package:langas_user/bloc/deliveries/cancel_delivery_bloc/cancel_delivery_bloc_state.dart';
-import 'package:langas_user/bloc/deliveries/deliveries_bloc/deliveries_bloc_bloc.dart';
-import 'package:langas_user/bloc/deliveries/deliveries_bloc/deliveries_bloc_event.dart';
-import 'package:langas_user/bloc/deliveries/deliveries_bloc/deliveries_bloc_state.dart';
-import 'package:langas_user/bloc/deliveries/select_driver_bloc/select_driver_bloc_bloc.dart';
-import 'package:langas_user/bloc/deliveries/select_driver_bloc/select_driver_bloc_state.dart';
-import 'package:langas_user/dto/delivery_dto.dart';
 import 'package:langas_user/flutter_flow/flutter_flow_icon_button.dart';
 import 'package:langas_user/flutter_flow/flutter_flow_theme.dart';
 import 'package:langas_user/models/delivery_model.dart';
@@ -23,7 +11,16 @@ import 'package:langas_user/util/apps_enums.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class CurrentDeliveriesWidget extends StatefulWidget {
-  const CurrentDeliveriesWidget({super.key});
+  final bool isLoading;
+  final String? error;
+  final List<Delivery> deliveries;
+
+  const CurrentDeliveriesWidget({
+    super.key,
+    this.isLoading = false,
+    this.error,
+    this.deliveries = const [],
+  });
 
   @override
   State<CurrentDeliveriesWidget> createState() =>
@@ -33,30 +30,6 @@ class CurrentDeliveriesWidget extends StatefulWidget {
 class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget> {
   final unfocusNode = FocusNode();
   final scaffoldKey = GlobalKey<ScaffoldState>();
-  String? _clientId;
-
-  @override
-  void initState() {
-    super.initState();
-    final authState = context.read<AuthBloc>().state;
-    if (authState is Authenticated) {
-      _clientId = authState.user.userId.toString();
-      _fetchDeliveries();
-    } else {
-      print("Error: User not authenticated in CurrentDeliveriesWidget");
-    }
-  }
-
-  void _fetchDeliveries() {
-    if (_clientId != null) {
-      context.read<DeliveriesBloc>().add(
-            FetchDeliveriesRequested(
-              clientId: _clientId!,
-              isHistory: false,
-            ),
-          );
-    }
-  }
 
   @override
   void dispose() {
@@ -85,61 +58,23 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget> {
         appBar: _buildAppBar(),
         body: SafeArea(
           top: true,
-          child: MultiBlocListener(
-            listeners: [
-              BlocListener<CancelDeliveryBloc, CancelDeliveryState>(
-                listener: (context, cancelState) {
-                  if (cancelState is CancelDeliverySuccess) {
-                    _showToast(cancelState.message, success: true);
-                    _fetchDeliveries();
-                  } else if (cancelState is CancelDeliveryFailure) {
-                    _showToast(
-                        "Cancellation failed: ${cancelState.failure.message}",
-                        success: false);
-                  }
-                },
-              ),
-              BlocListener<SelectDriverBloc, SelectDriverState>(
-                listener: (context, selectState) {
-                  if (selectState is SelectDriverSuccess) {
-                    _showToast(selectState.message, success: true);
-                    _fetchDeliveries();
-                  } else if (selectState is SelectDriverFailure) {
-                    _showToast(
-                        "Failed to assign driver: ${selectState.failure.message}",
-                        success: false);
-                  }
-                },
-              ),
-            ],
-            child: BlocBuilder<DeliveriesBloc, DeliveriesState>(
-              builder: (context, state) {
-                if (state is DeliveriesLoading && state is! DeliveriesSuccess) {
-                  return _buildLoadingIndicator();
-                } else if (state is DeliveriesSuccess) {
-                  List<Delivery> deliveries = state.response.content
-                      .where((d) =>
-                          d.deliveryStatus != DeliveryStatus.COMPLETED &&
-                          d.deliveryStatus != DeliveryStatus.CANCELLED)
-                      .toList();
-
-                  deliveries
-                      .sort((a, b) => b.deliveryId.compareTo(a.deliveryId));
-
-                  return deliveries.isEmpty
-                      ? _buildEmptyState()
-                      : _buildDeliveriesList(deliveries);
-                } else if (state is DeliveriesFailure) {
-                  return _buildErrorState(state.failure.message);
-                } else {
-                  return _buildLoadingIndicator();
-                }
-              },
-            ),
-          ),
+          child: _buildBody(),
         ),
       ),
     );
+  }
+
+  Widget _buildBody() {
+    if (widget.isLoading && widget.deliveries.isEmpty) {
+      return _buildLoadingIndicator();
+    }
+    if (widget.error != null) {
+      return _buildErrorState(widget.error!);
+    }
+    if (widget.deliveries.isEmpty) {
+      return _buildEmptyState();
+    }
+    return _buildDeliveriesList(widget.deliveries);
   }
 
   PreferredSizeWidget _buildAppBar() {
@@ -180,7 +115,7 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget> {
             color: Colors.white,
             size: 24.0,
           ),
-          onPressed: _fetchDeliveries,
+          onPressed: () {},
         ),
       ],
       centerTitle: true,
@@ -235,7 +170,7 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget> {
           ElevatedButton.icon(
             icon: const Icon(Icons.refresh),
             label: const Text('Retry'),
-            onPressed: _fetchDeliveries,
+            onPressed: () {},
             style: ElevatedButton.styleFrom(
               backgroundColor: FlutterFlowTheme.of(context).primary,
               foregroundColor: Colors.white,
@@ -248,7 +183,10 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget> {
 
   Widget _buildDeliveriesList(List<Delivery> deliveries) {
     return RefreshIndicator(
-      onRefresh: () async => _fetchDeliveries(),
+      onRefresh: () {
+        // Implement your refresh logic here
+        return Future.delayed(const Duration(seconds: 1));
+      },
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0.0),
         child: ListView.builder(
@@ -580,7 +518,7 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8)),
                   ),
-                  onPressed: () => _navigateToActiveDrivers(delivery),
+                  onPressed: () {},
                 ),
               ),
               const SizedBox(width: 8),
@@ -637,7 +575,7 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget> {
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
-          onPressed: () => _navigateToTrackDelivery(delivery),
+          onPressed: () {},
         );
       default:
         return const SizedBox.shrink();
@@ -657,27 +595,6 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget> {
         return FlutterFlowTheme.of(context).error;
       default:
         return FlutterFlowTheme.of(context).secondaryText;
-    }
-  }
-
-  void _navigateToActiveDrivers(Delivery delivery) async {
-    final result = await context.pushNamed<bool>(
-      'ActiveDriversWidget',
-      extra: delivery.deliveryId,
-    );
-    if (result == true && mounted) {
-      _fetchDeliveries();
-    }
-  }
-
-  void _navigateToTrackDelivery(Delivery delivery) {
-    if (_clientId != null) {
-      context.pushNamed('TrackDeliveryPage', extra: {
-        'deliveryId': delivery.deliveryId,
-        'clientId': _clientId!,
-      });
-    } else {
-      _showToast("Cannot track delivery: Client ID missing.", success: false);
     }
   }
 
@@ -701,7 +618,7 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget> {
             TextButton(
               onPressed: () {
                 Navigator.pop(dialogContext);
-                _dispatchCancelDelivery(delivery);
+                ;
               },
               child: Text('Yes, Cancel',
                   style: TextStyle(color: FlutterFlowTheme.of(context).error)),
@@ -712,15 +629,6 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget> {
         );
       },
     );
-  }
-
-  void _dispatchCancelDelivery(Delivery delivery) {
-    if (_clientId != null) {
-      final cancelDto = CancelDeliveryRequestDto(
-          deliveryId: delivery.deliveryId, reason: "Cancelled by user");
-      context.read<CancelDeliveryBloc>().add(
-          CancelDeliverySubmitted(clientId: _clientId!, requestDto: cancelDto));
-    }
   }
 
   void _callDriver(String phone) async {

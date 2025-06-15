@@ -1,12 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:intl_phone_field/phone_number.dart';
-import 'package:langas_user/bloc/auth/password_reset_request/password_reset_request_bloc_bloc.dart';
-import 'package:langas_user/bloc/auth/password_reset_request/password_reset_request_bloc_event.dart';
-import 'package:langas_user/bloc/auth/password_reset_request/password_reset_request_bloc_state.dart';
 import 'package:langas_user/flutter_flow/flutter_flow_theme.dart';
-import 'package:langas_user/pages/reset_password/reset_password_page.dart';
 
 class ForgotPasswordRequestScreen extends StatefulWidget {
   const ForgotPasswordRequestScreen({Key? key}) : super(key: key);
@@ -53,24 +48,16 @@ class _ForgotPasswordRequestScreenState
     super.dispose();
   }
 
-  void _dispatchRequestLinkEvent() {
+  void _handleSendInstructions() {
     if (_formKey.currentState!.validate()) {
-      String loginId;
+      // This is where you will dispatch the event to your new BLoC
       if (_isPhoneSelected) {
-        if (_fullPhoneNumber == null || _fullPhoneNumber!.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please enter a valid phone number.')),
-          );
-          return;
-        }
-        loginId = _fullPhoneNumber!;
+        print(
+            'Dispatching PasswordResetOtpRequested with phone: $_fullPhoneNumber');
       } else {
-        loginId = _emailController.text.trim();
+        print(
+            'Dispatching PasswordResetOtpRequested with email: ${_emailController.text}');
       }
-
-      context
-          .read<PasswordResetRequestBloc>()
-          .add(PasswordResetLinkRequested(loginId: loginId));
     }
   }
 
@@ -93,199 +80,151 @@ class _ForgotPasswordRequestScreenState
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocListener<PasswordResetRequestBloc, PasswordResetRequestState>(
-        listener: (context, state) {
-          if (state is PasswordResetRequestLoading) {
-            setState(() {
-              _isLoading = true;
-            });
-          } else if (state is PasswordResetRequestSuccess) {
-            setState(() {
-              _isLoading = false;
-            });
-
-            // Get the loginId used for the request
-            final loginId = _isPhoneSelected
-                ? _fullPhoneNumber!
-                : _emailController.text.trim();
-
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message), // Show confirmation message
-                backgroundColor: Colors.green,
-              ),
-            );
-
-            // Navigate to ResetPasswordScreen, passing only the loginId
-            Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) =>
-                  ResetPasswordScreen(loginId: loginId), // Pass loginId
-            ));
-          } else if (state is PasswordResetRequestFailure) {
-            setState(() {
-              _isLoading = false;
-            });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.failure.message),
-                backgroundColor: Colors.red,
-              ),
-            );
-          } else {
-            if (_isLoading) {
-              setState(() {
-                _isLoading = false;
-              });
-            }
-          }
-        },
-        child: SafeArea(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 40),
-                    Icon(
-                      Icons.lock_reset_outlined,
-                      size: 80,
-                      color: primaryColor,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 40),
+                  Icon(
+                    Icons.lock_reset_outlined,
+                    size: 80,
+                    color: primaryColor,
+                  ),
+                  const SizedBox(height: 30),
+                  const Text(
+                    'Reset Your Password',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Poppins',
+                      color: Color(0xFF0A1C40),
                     ),
-                    const SizedBox(height: 30),
-                    const Text(
-                      'Reset Your Password',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Poppins',
-                        color: Color(0xFF0A1C40),
-                      ),
-                      textAlign: TextAlign.center,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Select Email or Phone Number to receive your password reset instructions.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black54,
+                      fontFamily: 'Poppins',
+                      height: 1.4,
                     ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Select Email or Phone Number to receive your password reset instructions.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.black54,
-                        fontFamily: 'Poppins',
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              _tabController.animateTo(0);
-                            },
-                            child: Container(
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: _tabController.index == 0
-                                    ? const Color(0xFF0A1C40)
-                                    : Colors.grey.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  "Phone Number",
-                                  style: TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontWeight: FontWeight.w600,
-                                    color: _tabController.index == 0
-                                        ? Colors.white
-                                        : Colors.grey,
-                                  ),
-                                ),
-                              ),
+                  ),
+                  const SizedBox(height: 30),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            _tabController.animateTo(0);
+                          },
+                          child: Container(
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: _tabController.index == 0
+                                  ? const Color(0xFF0A1C40)
+                                  : Colors.grey.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              _tabController.animateTo(1);
-                            },
-                            child: Container(
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: _tabController.index == 1
-                                    ? const Color(0xFF0A1C40)
-                                    : Colors.grey.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  "Email",
-                                  style: TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontWeight: FontWeight.w600,
-                                    color: _tabController.index == 1
-                                        ? Colors.white
-                                        : Colors.grey,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 30),
-                    _isPhoneSelected ? _buildPhoneField() : _buildEmailField(),
-                    const SizedBox(height: 40),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 55,
-                      child: ElevatedButton(
-                        onPressed:
-                            _isLoading ? null : _dispatchRequestLinkEvent,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryColor,
-                          foregroundColor: Colors.white,
-                          disabledBackgroundColor: Colors.grey,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 3,
-                                ),
-                              )
-                            : const Text(
-                                'Send Instructions',
+                            child: Center(
+                              child: Text(
+                                "Phone Number",
                                 style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
                                   fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w600,
+                                  color: _tabController.index == 0
+                                      ? Colors.white
+                                      : Colors.grey,
                                 ),
                               ),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 30),
-                    Container(
-                      width: 60,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0A1C40),
-                        borderRadius: BorderRadius.circular(2),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            _tabController.animateTo(1);
+                          },
+                          child: Container(
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: _tabController.index == 1
+                                  ? const Color(0xFF0A1C40)
+                                  : Colors.grey.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Center(
+                              child: Text(
+                                "Email",
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w600,
+                                  color: _tabController.index == 1
+                                      ? Colors.white
+                                      : Colors.grey,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 30),
+                  _isPhoneSelected ? _buildPhoneField() : _buildEmailField(),
+                  const SizedBox(height: 40),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 55,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _handleSendInstructions,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: Colors.grey,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 3,
+                              ),
+                            )
+                          : const Text(
+                              'Send Instructions',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'Poppins',
+                              ),
+                            ),
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 30),
+                  Container(
+                    width: 60,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0A1C40),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

@@ -31,40 +31,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final AuthResult? authResult = await _storageService.getAuthResult();
 
     if (authResult != null && authResult.accessToken.isNotEmpty) {
-      final validationResult =
-          await _authRepository.checkAuthenticationStatus();
+      // Implement check to see if the token is still valid
 
-      await validationResult.fold(
-        (failure) async {
-          await _authRepository.logout();
-          await _fcmService.handleLogout();
-          emit(Unauthenticated());
-        },
-        (isValid) async {
-          if (isValid) {
-            emit(Authenticated(user: authResult.userProfile));
-            await _fcmService.registerTokenForUser(authResult.userID.toString(),
-                forceSend: false);
-          } else {
-            await _authRepository.logout();
-            await _fcmService.handleLogout();
-            emit(Unauthenticated());
-          }
-        },
-      );
+      emit(Authenticated(user: authResult.userProfile));
+      await _fcmService.registerTokenForUser(authResult.userID.toString());
     } else {
-      await _authRepository.logout();
-      await _fcmService.handleLogout();
       emit(Unauthenticated());
     }
   }
 
   Future<void> _onAuthLoggedIn(
       AuthLoggedIn event, Emitter<AuthState> emit) async {
-    await _storageService.saveAuthResult(event.authResult);
     emit(Authenticated(user: event.authResult.userProfile));
-    await _fcmService.registerTokenForUser(event.authResult.userID.toString(),
-        forceSend: true);
+    await _fcmService.registerTokenForUser(
+      event.authResult.userID.toString(),
+      forceSend: true,
+    );
   }
 
   Future<void> _onAuthLoggedOut(

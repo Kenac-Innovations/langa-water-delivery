@@ -11,12 +11,19 @@ class _AuthInterceptor extends Interceptor {
   @override
   void onRequest(
       RequestOptions options, RequestInterceptorHandler handler) async {
+    // List of paths that do not require an authentication token.
     final excludedPaths = [
       ApiConstants.login,
       ApiConstants.register,
-      ApiConstants.verifyAccount,
-      ApiConstants.requestPasswordLink,
+      ApiConstants.requestOtp,
+      ApiConstants.validateOtp,
+      ApiConstants.getRandomSecurityQuestions,
+      ApiConstants.requestPasswordResetOtp,
+      ApiConstants.verifyPasswordResetOtp,
+      ApiConstants.verifySecurityAnswers,
+      ApiConstants.resetPasswordWithToken,
     ];
+
     if (!excludedPaths.contains(options.path)) {
       final String? token = await _storageService.getAccessToken();
       if (token != null && token.isNotEmpty) {
@@ -30,7 +37,7 @@ class _AuthInterceptor extends Interceptor {
   void onError(DioException err, ErrorInterceptorHandler handler) async {
     if (err.response?.statusCode == 401) {
       await _storageService.deleteAccessToken();
-      debugPrint("_AuthInterceptor: Unauthorized error (401), tokens cleared.");
+      debugPrint("_AuthInterceptor: Unauthorized error (401), token cleared.");
     }
     super.onError(err, handler);
   }

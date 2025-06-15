@@ -1,23 +1,26 @@
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_bloc.dart';
-import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_state.dart';
-import 'package:langas_user/bloc/notification/notification_bloc_bloc.dart';
-import 'package:langas_user/bloc/notification/notification_bloc_event.dart';
-import 'package:langas_user/bloc/notification/notification_bloc_state.dart';
-import 'package:langas_user/dto/notifications_dto.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:langas_user/models/notifications_model.dart';
-import 'package:langas_user/models/user_model.dart';
 import 'package:langas_user/util/apps_enums.dart' show NotificationType;
-
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 class NotificationWidget extends StatefulWidget {
-  const NotificationWidget({super.key});
+  final List<NotificationModel> notifications = [];
+  final int unreadCount = 10;
+  final bool isLoading;
+  final bool isLoadingMore;
+  final String? error;
+
+  NotificationWidget({
+    super.key,
+    this.isLoading = false,
+    this.isLoadingMore = false,
+    this.error,
+  });
 
   @override
   State<NotificationWidget> createState() => _NotificationWidgetState();
@@ -27,14 +30,7 @@ class _NotificationWidgetState extends State<NotificationWidget>
     with TickerProviderStateMixin {
   final scaffoldKey = GlobalKey<ScaffoldState>();
   late AnimationController _fadeController;
-  User? _currentUser;
-  List<NotificationModel> _notifications = [];
-  bool _isLoading = false;
-  int _unreadCount = 0;
   final ScrollController _scrollController = ScrollController();
-  bool _isLastPage = false;
-  int _currentPage = 1;
-  final int _pageSize = 20;
 
   @override
   void initState() {
@@ -44,74 +40,13 @@ class _NotificationWidgetState extends State<NotificationWidget>
       vsync: this,
     );
     _scrollController.addListener(_onScroll);
-    _fetchCurrentUserAndNotifications(isRefresh: true);
     _fadeController.forward();
-  }
-
-  void _fetchCurrentUserAndNotifications({bool isRefresh = false}) {
-    final authState = context.read<AuthBloc>().state;
-    if (authState is Authenticated) {
-      _currentUser = authState.user;
-      if (_currentUser != null) {
-        if (isRefresh) {
-          _currentPage = 1;
-          _isLastPage = false;
-          _notifications = [];
-        }
-        context.read<NotificationBloc>().add(FetchNotifications(
-            userId: _currentUser!.userId,
-            pageNumber: _currentPage,
-            pageSize: _pageSize));
-        context
-            .read<NotificationBloc>()
-            .add(FetchUnreadNotificationCount(userId: _currentUser!.userId));
-      }
-    } else {
-      Fluttertoast.showToast(msg: "User not authenticated!");
-      if (mounted && context.canPop()) {
-        context.pop();
-      } else {
-        context.goNamed('LoginScreen');
-      }
-    }
   }
 
   void _onScroll() {
     if (_scrollController.position.pixels >=
             _scrollController.position.maxScrollExtent - 100 &&
-        !_isLoading &&
-        !_isLastPage) {
-      if (_currentUser != null) {
-        context.read<NotificationBloc>().add(FetchNotifications(
-            userId: _currentUser!.userId,
-            pageNumber: _currentPage + 1,
-            pageSize: _pageSize));
-      }
-    }
-  }
-
-  void _handleMarkAsRead(NotificationModel notification) {
-    if (!notification.read) {
-      context.read<NotificationBloc>().add(UpdateNotificationStatusEvent(
-          requestDto: UpdateNotificationStatusRequestDto(
-              notificationId: notification.id, read: true)));
-    }
-  }
-
-  void _handleDeleteNotification(int notificationId) {
-    if (_currentUser != null) {
-      context
-          .read<NotificationBloc>()
-          .add(DeleteNotificationByIdEvent(notificationId: notificationId));
-    }
-  }
-
-  void _handleMarkAllAsRead() {
-    if (_currentUser != null) {
-      context
-          .read<NotificationBloc>()
-          .add(MarkAllNotificationsAsReadEvent(userId: _currentUser!.userId));
-    }
+        !widget.isLoading) {}
   }
 
   @override
@@ -138,89 +73,26 @@ class _NotificationWidgetState extends State<NotificationWidget>
       appBar: _buildAppBar(),
       body: SafeArea(
         top: true,
-        child: BlocConsumer<NotificationBloc, NotificationState>(
-          listener: (context, state) {
-            if (state is NotificationLoading && _notifications.isEmpty) {
-              setState(() {
-                _isLoading = true;
-              });
-            } else if (state is NotificationLoading &&
-                _notifications.isNotEmpty) {
-              setState(() {
-                _isLoading = true;
-              });
-            } else {
-              setState(() {
-                _isLoading = false;
-              });
-            }
-
-            if (state is NotificationsLoadSuccess) {
-              final newNotifications = state.notifications.content;
-              setState(() {
-                _currentPage = state.notifications.pagination.pageNumber;
-                _isLastPage = (_currentPage + 1) >=
-                    state.notifications.pagination.totalPages;
-
-                final uniqueNewNotifications = newNotifications
-                    .where((newNotif) => !_notifications.any(
-                        (existingNotif) => existingNotif.id == newNotif.id))
-                    .toList();
-                _notifications.addAll(uniqueNewNotifications);
-              });
-            } else if (state is NotificationUpdateSuccess) {
-              final index = _notifications
-                  .indexWhere((n) => n.id == state.notification.id);
-              if (index != -1) {
-                setState(() {
-                  _notifications[index] = state.notification;
-                });
-              }
-              if (_currentUser != null) {
-                context.read<NotificationBloc>().add(
-                    FetchUnreadNotificationCount(userId: _currentUser!.userId));
-              }
-            } else if (state is MarkAllReadSuccess) {
-              Fluttertoast.showToast(
-                  msg: state.message, backgroundColor: Colors.green);
-              _fetchCurrentUserAndNotifications(isRefresh: true);
-            } else if (state is NotificationDeleteSuccess) {
-              Fluttertoast.showToast(
-                  msg: state.message, backgroundColor: Colors.green);
-              setState(() {
-                _notifications
-                    .removeWhere((n) => n.id == state.deletedNotificationId);
-              });
-              if (_currentUser != null) {
-                context.read<NotificationBloc>().add(
-                    FetchUnreadNotificationCount(userId: _currentUser!.userId));
-              }
-            } else if (state is UnreadCountSuccess) {
-              setState(() {
-                _unreadCount = state.count;
-              });
-            } else if (state is NotificationOperationFailure) {
-              Fluttertoast.showToast(
-                  msg: "Error: ${state.failure.message}",
-                  backgroundColor: Colors.red);
-            }
-          },
-          builder: (context, state) {
-            return FadeTransition(
-              opacity: _fadeController,
-              child: _isLoading && _notifications.isEmpty
-                  ? Center(
-                      child: CircularProgressIndicator(
-                      color: FlutterFlowTheme.of(context).primary,
-                    ))
-                  : _notifications.isEmpty
-                      ? _buildEmptyState()
-                      : _buildNotificationList(),
-            );
-          },
+        child: FadeTransition(
+          opacity: _fadeController,
+          child: _buildBody(),
         ),
       ),
     );
+  }
+
+  Widget _buildBody() {
+    if (widget.isLoading && widget.notifications.isEmpty) {
+      return Center(
+        child: CircularProgressIndicator(
+          color: FlutterFlowTheme.of(context).primary,
+        ),
+      );
+    }
+    if (widget.notifications.isEmpty) {
+      return _buildEmptyState();
+    }
+    return _buildNotificationList();
   }
 
   PreferredSizeWidget _buildAppBar() {
@@ -242,7 +114,7 @@ class _NotificationWidgetState extends State<NotificationWidget>
         },
       ),
       title: Text(
-        'NOTIFICATIONS ($_unreadCount unread)',
+        'NOTIFICATIONS (${widget.unreadCount} unread)',
         style: FlutterFlowTheme.of(context).headlineMedium.override(
               fontFamily: 'Poppins',
               color: Colors.white,
@@ -257,9 +129,7 @@ class _NotificationWidgetState extends State<NotificationWidget>
             color: Colors.white,
           ),
           onSelected: (value) {
-            if (value == 'mark_all_read') {
-              _handleMarkAllAsRead();
-            }
+            if (value == 'mark_all_read') {}
           },
           itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
             const PopupMenuItem<String>(
@@ -312,21 +182,22 @@ class _NotificationWidgetState extends State<NotificationWidget>
 
   Widget _buildNotificationList() {
     return RefreshIndicator(
-      onRefresh: () async {
-        _fetchCurrentUserAndNotifications(isRefresh: true);
+      onRefresh: () {
+        // Implement your refresh logic here
+        return Future.delayed(const Duration(seconds: 1));
       },
       child: ListView.builder(
         controller: _scrollController,
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-        itemCount: _notifications.length + (_isLoading && !_isLastPage ? 1 : 0),
+        itemCount: widget.notifications.length + (widget.isLoadingMore ? 1 : 0),
         itemBuilder: (context, index) {
-          if (index == _notifications.length) {
+          if (index == widget.notifications.length) {
             return const Padding(
               padding: EdgeInsets.symmetric(vertical: 20.0),
               child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
             );
           }
-          final notification = _notifications[index];
+          final notification = widget.notifications[index];
           return _buildNotificationItem(notification);
         },
       ),
@@ -402,7 +273,7 @@ class _NotificationWidgetState extends State<NotificationWidget>
       ),
       direction: DismissDirection.endToStart,
       onDismissed: (direction) {
-        _handleDeleteNotification(notification.id);
+        ;
       },
       child: Card(
         clipBehavior: Clip.antiAliasWithSaveLayer,
@@ -420,7 +291,6 @@ class _NotificationWidgetState extends State<NotificationWidget>
         margin: const EdgeInsets.only(bottom: 8),
         child: InkWell(
           onTap: () {
-            _handleMarkAsRead(notification);
             _showNotificationDetail(notification);
           },
           child: Padding(

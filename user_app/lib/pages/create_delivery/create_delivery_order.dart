@@ -1,20 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
-import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_bloc.dart';
-import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_state.dart';
-import 'package:langas_user/bloc/deliveries/create_delivery_bloc/create_delivery_bloc_bloc.dart';
-import 'package:langas_user/bloc/deliveries/create_delivery_bloc/create_delivery_bloc_event.dart';
-import 'package:langas_user/bloc/deliveries/create_delivery_bloc/create_delivery_bloc_state.dart';
-import 'package:langas_user/bloc/deliveries/delivery_price_bloc/delivery_price_bloc_bloc.dart';
-import 'package:langas_user/bloc/deliveries/delivery_price_bloc/delivery_price_bloc_event.dart';
-import 'package:langas_user/bloc/deliveries/delivery_price_bloc/delivery_price_bloc_state.dart';
-import 'package:langas_user/dto/delivery_dto.dart';
 import 'package:langas_user/flutter_flow/flutter_flow_theme.dart';
-import 'package:langas_user/flutter_flow/nav/nav.dart';
 import 'package:langas_user/models/user_model.dart';
-import 'package:langas_user/pages/create_delivery/delivery_confirmation_step_content.dart';
 import 'package:langas_user/pages/create_delivery/delivery_summary_step_content.dart';
 import 'package:langas_user/pages/create_delivery/drop_off_step_content.dart';
 import 'package:langas_user/pages/create_delivery/parcel_details_step_content.dart';
@@ -29,11 +17,13 @@ import 'package:langas_user/util/apps_enums.dart';
 class MultiStepDelivery extends StatefulWidget {
   final String? initialCurrentLocationString;
   final LatLng? initialCurrentLatLng;
+  final User? currentUser;
 
   const MultiStepDelivery({
     super.key,
     this.initialCurrentLocationString,
     this.initialCurrentLatLng,
+    this.currentUser,
   });
 
   @override
@@ -82,7 +72,6 @@ class _MultiStepDeliveryState extends State<MultiStepDelivery> {
   num totalCost = 0;
   bool _isPriceLoading = false;
   bool _isSubmitting = false;
-  bool _isProcessingAction = false;
 
   late GeolocationService _geolocationService;
   User? _currentUser;
@@ -92,8 +81,9 @@ class _MultiStepDeliveryState extends State<MultiStepDelivery> {
   @override
   void initState() {
     super.initState();
-    _geolocationService = context.read<GeolocationService>();
-    _fetchCurrentUser();
+    _geolocationService = GeolocationService();
+    _currentUser = widget.currentUser;
+
     if (widget.initialCurrentLatLng != null) {
       pickupLatLng = widget.initialCurrentLatLng;
     }
@@ -103,15 +93,6 @@ class _MultiStepDeliveryState extends State<MultiStepDelivery> {
       useMyCurrentLocationForPickup = true;
     } else {
       _fetchInitialLocation();
-    }
-  }
-
-  void _fetchCurrentUser() {
-    final authState = context.read<AuthBloc>().state;
-    if (authState is Authenticated) {
-      setState(() {
-        _currentUser = authState.user;
-      });
     }
   }
 
@@ -155,9 +136,7 @@ class _MultiStepDeliveryState extends State<MultiStepDelivery> {
 
   Future<void> _fillPickUpUserLocation() async {
     if (useMyCurrentLocationForPickup) {
-      setState(() {
-        _isProcessingAction = true;
-      });
+      setState(() => _isSubmitting = true);
       Position? position = await _geolocationService.getCurrentLocation();
       if (position != null && mounted) {
         pickupLatLng = LatLng(position.latitude, position.longitude);
@@ -166,7 +145,7 @@ class _MultiStepDeliveryState extends State<MultiStepDelivery> {
         setState(() {
           pickupLocationDisplay =
               address.isNotEmpty ? address : "Current Location";
-          _isProcessingAction = false;
+          _isSubmitting = false;
         });
         _triggerPriceCalculation();
       } else if (mounted) {
@@ -175,7 +154,7 @@ class _MultiStepDeliveryState extends State<MultiStepDelivery> {
           useMyCurrentLocationForPickup = false;
           pickupLocationDisplay = "Search Pickup Location";
           pickupLatLng = null;
-          _isProcessingAction = false;
+          _isSubmitting = false;
         });
       }
     } else {
@@ -229,33 +208,12 @@ class _MultiStepDeliveryState extends State<MultiStepDelivery> {
   Future<void> _calculateDistanceAndFetchPrice() async {
     if (pickupLatLng == null || dropOffLatLng == null) return;
 
-    try {
-      double distance = await _geolocationService.calculateDistance(
-        pickupLatLng!.latitude,
-        pickupLatLng!.longitude,
-        dropOffLatLng!.latitude,
-        dropOffLatLng!.longitude,
-      );
+    // UI Only: Simulate a network call for price
+    await Future.delayed(const Duration(seconds: 2));
 
-      double distanceInKm = distance / 1000.0;
-
-      final priceDto = PriceGeneratorRequestDto(
-        vehicleType: selectedVehicleType,
-        sensitivity: selectedSensitivity,
-        distance: distanceInKm,
-        currency: 'USD',
-      );
-      context
-          .read<DeliveryPriceBloc>()
-          .add(GetDeliveryPriceRequested(requestDto: priceDto));
-    } catch (e) {
-      print("Error calculating distance or preparing price request: $e");
-      _showErrorToast("Could not calculate distance.");
-      if (mounted) {
-        setState(() {
-          _isPriceLoading = false;
-        });
-      }
+    if (mounted) {
+      // Placeholder price
+      _updateCosts(15.50);
     }
   }
 
@@ -270,7 +228,7 @@ class _MultiStepDeliveryState extends State<MultiStepDelivery> {
     });
   }
 
-  void _handleSubmitOrder() {
+  Future<void> _handleSubmitOrder() async {
     if (_currentStep != 4) return;
 
     if (pickupLatLng == null || dropOffLatLng == null || totalCost <= 0) {
@@ -302,39 +260,16 @@ class _MultiStepDeliveryState extends State<MultiStepDelivery> {
       return;
     }
 
-    final deliveryDateTime = _getCombinedDateTime();
+    setState(() => _isSubmitting = true);
 
-    final requestDto = CreateDeliveryRequestDto(
-      priceAmount: totalCost,
-      autoAssign: autoAssignDriver,
-      currency: 'USD',
-      sensitivity: selectedSensitivity,
-      pickupLatitude: pickupLatLng!.latitude,
-      pickupLongitude: pickupLatLng!.longitude,
-      pickupLocation: pickupLocationDisplay,
-      pickupContactName: pickupContactNameController.text,
-      pickupContactPhone: pickupPhoneController.text,
-      dropOffLatitude: dropOffLatLng!.latitude,
-      dropOffLongitude: dropOffLatLng!.longitude,
-      dropOffLocation: dropOffLocationDisplay,
-      dropOffContactName: dropOffContactNameController.text,
-      dropOffContactPhone: dropOffPhoneController.text,
-      deliveryInstructions: instructionsController.text,
-      parcelDescription: parcelDescriptionController.text,
-      vehicleType: selectedVehicleType,
-      paymentMethod: selectedPaymentMethod,
-      deliveryDate: deliveryDateTime,
-    );
+    // UI Only: Simulate network delay
+    await Future.delayed(const Duration(seconds: 2));
 
-    final authState = context.read<AuthBloc>().state;
-    if (authState is Authenticated) {
-      final clientId = authState.user.userId.toString();
-      context
-          .read<CreateDeliveryBloc>()
-          .add(SubmitDelivery(clientId: clientId, requestDto: requestDto));
-    } else {
-      _showErrorToast("Authentication error. Please log in again.");
-      context.goNamed('LoginScreen');
+    if (mounted) {
+      setState(() => _isSubmitting = false);
+      _showSuccessToast("Delivery submitted successfully! (UI Only)");
+      // In a real app, you would navigate away here, e.g.
+      // Navigator.pop(context);
     }
   }
 
@@ -459,30 +394,13 @@ class _MultiStepDeliveryState extends State<MultiStepDelivery> {
       ),
       Step(
         title: const Text("Summary"),
-        content: BlocListener<DeliveryPriceBloc, DeliveryPriceState>(
-          listener: (context, priceState) {
-            if (priceState is DeliveryPriceSuccess) {
-              _updateCosts(priceState.price);
-            } else if (priceState is DeliveryPriceFailure) {
-              _showErrorToast(
-                  "Could not calculate price: ${priceState.failure.message}");
-              setState(() {
-                _isPriceLoading = false;
-              });
-            } else if (priceState is DeliveryPriceLoading) {
-              setState(() {
-                _isPriceLoading = true;
-              });
-            }
-          },
-          child: DeliverySummaryStepContent(
-            formKey: _formKeyStep4,
-            deliveryCost: deliveryCost,
-            taxAmount: taxAmount,
-            totalCost: totalCost,
-            selectedPaymentMethod: selectedPaymentMethod,
-            isLoading: _isPriceLoading,
-          ),
+        content: DeliverySummaryStepContent(
+          formKey: _formKeyStep4,
+          deliveryCost: deliveryCost,
+          taxAmount: taxAmount,
+          totalCost: totalCost,
+          selectedPaymentMethod: selectedPaymentMethod,
+          isLoading: _isPriceLoading,
         ),
         isActive: _currentStep >= 4,
         state: _currentStep == 4 ? StepState.editing : StepState.complete,
@@ -628,85 +546,58 @@ class _MultiStepDeliveryState extends State<MultiStepDelivery> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: BlocListener<CreateDeliveryBloc, CreateDeliveryState>(
-        listener: (context, state) {
-          if (state is CreateDeliveryLoading) {
-            setState(() {
-              _isSubmitting = true;
-            });
-          } else if (state is CreateDeliverySuccess) {
-            setState(() {
-              _isSubmitting = false;
-            });
-            _showSuccessToast("Delivery created successfully!");
-            context.goNamed('Current_Deliveries');
-          } else if (state is CreateDeliveryFailure) {
-            setState(() {
-              _isSubmitting = false;
-            });
-            _showErrorToast(
-                "Failed to create delivery: ${state.failure.message}");
-          } else {
-            if (_isSubmitting) {
+      body: Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: Theme.of(context).colorScheme.copyWith(
+                primary: FlutterFlowTheme.of(context).primary,
+                onSurface: Colors.black87,
+              ),
+          canvasColor: Colors.white,
+        ),
+        child: Stepper(
+          type: StepperType.vertical,
+          currentStep: _currentStep,
+          steps: _buildSteps(),
+          onStepContinue: () {
+            bool valid = false;
+            switch (_currentStep) {
+              case 0:
+                valid = _formKeyStep0.currentState?.validate() ?? false;
+                break;
+              case 1:
+                valid = _formKeyStep1.currentState?.validate() ?? false;
+                break;
+              case 2:
+                valid = _formKeyStep2.currentState?.validate() ?? false;
+                break;
+              case 3:
+                valid = _formKeyStep3.currentState?.validate() ?? false;
+                break;
+              case 4:
+                valid = true;
+                break;
+            }
+            if (valid) {
+              if (_currentStep < _buildSteps().length - 1) {
+                setState(() {
+                  _currentStep++;
+                });
+                if (_currentStep == 4) {
+                  _triggerPriceCalculation();
+                }
+              }
+            }
+          },
+          onStepCancel: () {
+            if (_currentStep > 0) {
               setState(() {
-                _isSubmitting = false;
+                _currentStep--;
               });
             }
-          }
-        },
-        child: Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: FlutterFlowTheme.of(context).primary,
-                  onSurface: Colors.black87,
-                ),
-            canvasColor: Colors.white,
-          ),
-          child: Stepper(
-            type: StepperType.vertical,
-            currentStep: _currentStep,
-            steps: _buildSteps(),
-            onStepContinue: () {
-              bool valid = false;
-              switch (_currentStep) {
-                case 0:
-                  valid = _formKeyStep0.currentState!.validate();
-                  break;
-                case 1:
-                  valid = _formKeyStep1.currentState!.validate();
-                  break;
-                case 2:
-                  valid = _formKeyStep2.currentState!.validate();
-                  break;
-                case 3:
-                  valid = _formKeyStep3.currentState!.validate();
-                  break;
-                case 4:
-                  valid = true;
-                  break;
-              }
-              if (valid) {
-                if (_currentStep < _buildSteps().length - 1) {
-                  setState(() {
-                    _currentStep++;
-                  });
-                  if (_currentStep == 4) {
-                    _triggerPriceCalculation();
-                  }
-                } else {}
-              }
-            },
-            onStepCancel: () {
-              if (_currentStep > 0) {
-                setState(() {
-                  _currentStep--;
-                });
-              }
-            },
-            controlsBuilder: (context, details) {
-              return _buildStepperControls(details);
-            },
-          ),
+          },
+          controlsBuilder: (context, details) {
+            return _buildStepperControls(details);
+          },
         ),
       ),
     );

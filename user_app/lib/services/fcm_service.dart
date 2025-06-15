@@ -276,28 +276,28 @@ class FCMService {
       pushNotificationToken: token,
     );
 
-    try {
-      debugPrint(
-          'FCMService (UserApp): Sending FCM token for user $userId: ${requestDto.toJson()}');
-      final result = await _authRepository.registerDeviceToken(
-        userId: userId,
-        requestDto: requestDto,
-      );
+    // try {
+    //   debugPrint(
+    //       'FCMService (UserApp): Sending FCM token for user $userId: ${requestDto.toJson()}');
+    //   final result = await _authRepository.registerDeviceToken(
+    //     userId: userId,
+    //     requestDto: requestDto,
+    //   );
 
-      result.fold(
-        (failure) {
-          debugPrint(
-              'FCMService (UserApp): Failed to send FCM token: ${failure.message} (Status: ${failure.statusCode})');
-        },
-        (deviceData) {
-          debugPrint(
-              'FCMService (UserApp): FCM token registered successfully for device ID: ${deviceData.id}');
-          _secureStorageService.write(key: _lastSentFcmTokenKey, value: token);
-        },
-      );
-    } catch (e) {
-      debugPrint('FCMService (UserApp): Exception while sending FCM token: $e');
-    }
+    //   result.fold(
+    //     (failure) {
+    //       debugPrint(
+    //           'FCMService (UserApp): Failed to send FCM token: ${failure.message} (Status: ${failure.statusCode})');
+    //     },
+    //     (deviceData) {
+    //       debugPrint(
+    //           'FCMService (UserApp): FCM token registered successfully for device ID: ${deviceData.id}');
+    //       _secureStorageService.write(key: _lastSentFcmTokenKey, value: token);
+    //     },
+    //   );
+    // } catch (e) {
+    //   debugPrint('FCMService (UserApp): Exception while sending FCM token: $e');
+    // }
   }
 
   Future<void> handleLogout() async {
