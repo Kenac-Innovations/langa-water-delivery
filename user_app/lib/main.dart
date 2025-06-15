@@ -13,7 +13,9 @@ import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_state.dart';
 import 'package:langas_user/bloc/auth/login_bloc/login_bloc_bloc.dart';
 import 'package:langas_user/bloc/auth/password_reset_bloc/password_reset_bloc_bloc.dart';
 import 'package:langas_user/bloc/auth/register_bloc/register_bloc_bloc.dart';
+import 'package:langas_user/bloc/promotions/promotions_bloc_bloc.dart';
 import 'package:langas_user/repository/auth_repository.dart';
+import 'package:langas_user/repository/promotions_repository.dart';
 
 import 'package:langas_user/services/fcm_service.dart';
 import 'package:langas_user/services/firebase_driver_service.dart';
@@ -50,6 +52,9 @@ void main() async {
       dioClient: dioClient, storageService: secureStorageService);
   final geolocationService = GeolocationService();
   final firebaseDriverService = FirebaseDriverService();
+  final promotionsRepository = PromotionsRepository(
+    dioClient: dioClient,
+  );
 
   final fcmService = FCMService(
     firebaseMessaging: FirebaseMessaging.instance,
@@ -68,6 +73,7 @@ void main() async {
         RepositoryProvider.value(value: geolocationService),
         RepositoryProvider.value(value: fcmService),
         RepositoryProvider.value(value: firebaseDriverService),
+        RepositoryProvider.value(value: promotionsRepository),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -91,6 +97,11 @@ void main() async {
           BlocProvider<PasswordResetBloc>(
             create: (context) => PasswordResetBloc(
               authRepository: context.read<AuthRepository>(),
+            ),
+          ),
+          BlocProvider<PromotionsBloc>(
+            create: (context) => PromotionsBloc(
+              promotionsRepository: context.read<PromotionsRepository>(),
             ),
           ),
         ],
