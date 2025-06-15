@@ -13,7 +13,6 @@ import 'package:langas_user/pages/edit_profile/edit_profile_widget.dart';
 import 'package:langas_user/pages/forgot_password/forgot_password_widget.dart';
 import 'package:langas_user/pages/my_wallet/my_wallet_widget.dart';
 import 'package:langas_user/pages/notification/notification_widget.dart';
-import 'package:langas_user/pages/otp_verification/otp_screen_page.dart';
 import 'package:langas_user/pages/reset_password/reset_password_page.dart';
 import 'package:langas_user/pages/splash_screen/splash_screen_widget.dart';
 import 'package:langas_user/pages/user_login/user_login_widget.dart';
@@ -75,20 +74,6 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           builder: (context, state) => const SignUpScreen(),
         ),
         GoRoute(
-          name: 'OtpVerificationScreen',
-          path: '/otpVerification',
-          builder: (context, state) {
-            final loginId = state.extra as String?;
-            if (loginId == null) {
-              print('Error: Missing loginId for OtpVerificationScreen');
-              return const ErrorScreen(
-                  message:
-                      'Missing required information for OTP verification.');
-            }
-            return OtpVerificationScreen(loginId: loginId);
-          },
-        ),
-        GoRoute(
           name: 'ForgotPasswordRequestScreen',
           path: '/forgotPassword',
           builder: (context, state) => const ForgotPasswordRequestScreen(),
@@ -104,7 +89,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
                     message:
                         'Missing required information for password reset.');
               }
-              return ResetPasswordScreen(loginId: loginId);
+              return ResetPasswordScreen();
             }),
         GoRoute(
             name: 'HomePage',

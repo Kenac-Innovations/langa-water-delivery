@@ -1,5 +1,5 @@
 class ApiConstants {
-  static const String baseUrl = 'http://41.174.125.165:4027';
+  static const String baseUrl = 'http://41.174.125.165:4037';
 
   static const String googleApiKey = 'AIzaSyCypv_t46n6rxFVM65vQ8Qpt5kekFR007I';
   static const String paynowIntegrationKey =
@@ -12,12 +12,20 @@ class ApiConstants {
       'AIzaSyCypv_t46n6rxFVM65vQ8Qpt5kekFR007I';
 
   // Authentication Endpoints
-  static const String register = '/api/v1/client/auth/register';
-  static const String verifyAccount = '/api/v1/client/auth/verify-account';
-  static const String login = '/api/v1/client/auth/login';
-  static const String requestPasswordLink =
-      '/api/v1/client/auth/request-password-link';
-  static const String resetPassword = '/api/v1/client/auth/reset-password';
+  static const String requestOtp = '/api/v2/auth/request-otp';
+  static const String validateOtp = '/api/v2/auth/validate-otp';
+  static const String register = '/api/v2/auth/register';
+  static const String login = '/api/v2/auth/login';
+  static const String getRandomSecurityQuestions =
+      '/api/v2/security-questions/random';
+  static const String requestPasswordResetOtp =
+      '/api/v2/auth/password/request-reset-otp';
+  static const String verifyPasswordResetOtp =
+      '/api/v2/auth/password/verify-reset-otp';
+  static const String verifySecurityAnswers =
+      '/api/v2/auth/password/verify-security-answers';
+  static const String resetPasswordWithToken =
+      '/api/v2/auth/password/reset-with-token';
 
   // === Delivery Endpoints ===
   static const String clientDeliveriesBase = '/api/v1/client';
