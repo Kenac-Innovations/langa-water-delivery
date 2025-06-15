@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import zw.co.kenac.takeu.backend.dto.GenericResponse;
 import zw.co.kenac.takeu.backend.dto.auth.LoginRequest;
-import zw.co.kenac.takeu.backend.dto.auth.client.ClientLoginResponse;
+import zw.co.kenac.takeu.backend.dto.auth.client.LoginResponseDto;
 import zw.co.kenac.takeu.backend.dto.auth.client.ClientRegisterRequestDto;
 import zw.co.kenac.takeu.backend.dto.auth.client.NewPasswordRequest;
 import zw.co.kenac.takeu.backend.dto.auth.client.OtpRequest;
@@ -37,7 +37,7 @@ public class ClientAuthLangaController {
 
     @Operation(summary = "Register a new client using OTP verification")
     @PostMapping("/register")
-    public ResponseEntity<GenericResponse<ClientLoginResponse>> registerClient(
+    public ResponseEntity<GenericResponse<LoginResponseDto>> registerClient(
             @RequestBody ClientRegisterRequestDto requestDto) {
         return ResponseEntity.ok(GenericResponse.success(clientAuthService.registerClient(requestDto)));
     }
@@ -50,8 +50,8 @@ public class ClientAuthLangaController {
 
     @Operation(summary = "Login existing client using phone and password")
     @PostMapping("/login")
-    public ResponseEntity<GenericResponse<ClientLoginResponse>> login(@RequestBody LoginRequest loginRequest) {
-        ClientLoginResponse response = clientAuthService.login(loginRequest);
+    public ResponseEntity<GenericResponse<LoginResponseDto>> login(@RequestBody LoginRequest loginRequest) {
+        LoginResponseDto response = clientAuthService.login(loginRequest);
         return ResponseEntity.ok(GenericResponse.success(response));
     }
 

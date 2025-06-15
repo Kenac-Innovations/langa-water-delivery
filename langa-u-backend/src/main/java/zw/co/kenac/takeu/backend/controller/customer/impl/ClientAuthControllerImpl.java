@@ -10,7 +10,7 @@ import zw.co.kenac.takeu.backend.dto.auth.LoginRequest;
 import zw.co.kenac.takeu.backend.dto.auth.PasswordLinkRequest;
 import zw.co.kenac.takeu.backend.dto.auth.PasswordResetRequest;
 import zw.co.kenac.takeu.backend.dto.auth.VerifyAccountRequest;
-import zw.co.kenac.takeu.backend.dto.auth.client.ClientLoginResponse;
+import zw.co.kenac.takeu.backend.dto.auth.client.LoginResponseDto;
 import zw.co.kenac.takeu.backend.dto.auth.client.ClientRegisterRequest;
 import zw.co.kenac.takeu.backend.dto.auth.client.ClientRegisterResponse;
 import zw.co.kenac.takeu.backend.service.client.ClientAuthService;
@@ -24,8 +24,8 @@ public class ClientAuthControllerImpl implements ClientAuthController {
     private final ClientAuthService clientAuthService;
 
     @Override
-    public ResponseEntity<GenericResponse<ClientLoginResponse>> login(LoginRequest loginRequest) {
-        ClientLoginResponse response = clientAuthService.login(loginRequest);
+    public ResponseEntity<GenericResponse<LoginResponseDto>> login(LoginRequest loginRequest) {
+        LoginResponseDto response = clientAuthService.login(loginRequest);
         return ResponseEntity.ok(success(response));
     }
 

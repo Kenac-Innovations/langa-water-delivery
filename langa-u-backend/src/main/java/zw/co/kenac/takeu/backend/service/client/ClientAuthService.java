@@ -12,10 +12,10 @@ import java.util.List;
  */
 public interface ClientAuthService {
 
-    ClientLoginResponse login(LoginRequest loginRequest);
+    LoginResponseDto login(LoginRequest loginRequest);
 
     ClientRegisterResponse register(ClientRegisterRequest request);
-    ClientLoginResponse registerClient(ClientRegisterRequestDto requestDto);
+    LoginResponseDto registerClient(ClientRegisterRequestDto requestDto);
 
     Boolean verifyAccountOtp(OtpVerificationDto otpVerificationDto);
 

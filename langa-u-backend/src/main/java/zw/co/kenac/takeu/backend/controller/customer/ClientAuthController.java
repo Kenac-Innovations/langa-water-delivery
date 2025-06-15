@@ -5,7 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import zw.co.kenac.takeu.backend.dto.GenericResponse;
 import zw.co.kenac.takeu.backend.dto.auth.*;
-import zw.co.kenac.takeu.backend.dto.auth.client.ClientLoginResponse;
+import zw.co.kenac.takeu.backend.dto.auth.client.LoginResponseDto;
 import zw.co.kenac.takeu.backend.dto.auth.client.ClientRegisterRequest;
 import zw.co.kenac.takeu.backend.dto.auth.client.ClientRegisterResponse;
 
@@ -14,7 +14,7 @@ import zw.co.kenac.takeu.backend.dto.auth.client.ClientRegisterResponse;
 public interface ClientAuthController {
 
     @PostMapping("/login")
-    ResponseEntity<GenericResponse<ClientLoginResponse>> login(@RequestBody LoginRequest loginRequest);
+    ResponseEntity<GenericResponse<LoginResponseDto>> login(@RequestBody LoginRequest loginRequest);
 
     @PostMapping("/register")
     ResponseEntity<GenericResponse<ClientRegisterResponse>> register(@RequestBody ClientRegisterRequest registerRequest);
