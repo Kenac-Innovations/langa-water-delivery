@@ -36,7 +36,7 @@ public class WaterDeliveryController {
         return ResponseEntity.ok(GenericResponse.success(orders));
     }
     @Operation(summary = "Get client recent Deliveries")
-    @GetMapping("/{clientId}")
+    @GetMapping("/client/{clientId}")
     public ResponseEntity<GenericResponse<PaginatedResponse<WaterDeliveryResponse>>> getClientDeliveries(@PathVariable Long clientId, @RequestParam(defaultValue = "ALL") String status,
                                                                                                  @RequestParam(defaultValue = "1") int pageNumber,
                                                                                                  @RequestParam(defaultValue = "25") int pageSize) {
@@ -44,7 +44,7 @@ public class WaterDeliveryController {
         return ResponseEntity.ok(GenericResponse.success(orders));
     }
     @Operation(summary = "Get client recent Driver Deliveries")
-    @GetMapping("/{driverId}")
+    @GetMapping("/driver/{driverId}")
     public ResponseEntity<GenericResponse<PaginatedResponse<WaterDeliveryResponse>>> getDriverDeliveries(@PathVariable Long driverId, @RequestParam(defaultValue = "ALL") String status,
                                                                                                     @RequestParam(defaultValue = "1") int pageNumber,
                                                                                                     @RequestParam(defaultValue = "25") int pageSize) {
@@ -54,7 +54,7 @@ public class WaterDeliveryController {
 
 
     @Operation(summary = "Get a specific delivery  by ID")
-    @GetMapping("/{orderId}")
+    @GetMapping("/getbyId/{orderId}")
     public ResponseEntity<GenericResponse<WaterDeliveryResponse>> getOrderById(@PathVariable Long orderId) {
         WaterDeliveryResponse response = waterDeliveryService.getDeliveryById(orderId);
         return ResponseEntity.ok(GenericResponse.success(response));

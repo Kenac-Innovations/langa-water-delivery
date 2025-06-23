@@ -78,9 +78,9 @@ public class FirebaseWaterServiceImpl implements FirebaseWaterService {
 
             // Generate geohash for dropoff location
             String dropoffGeohash = GeoHash.encodeHash(
-                delivery.getDropOffLocation().getDropOffLatitude(),
-                delivery.getDropOffLocation().getDropOffLongitude(),
-                9
+                    delivery.getDropOffLocation().getDropOffLatitude(),
+                    delivery.getDropOffLocation().getDropOffLongitude(),
+                    9
             );
 
             Map<String, Object> deliveryData = new HashMap<>();
@@ -88,10 +88,11 @@ public class FirebaseWaterServiceImpl implements FirebaseWaterService {
             deliveryData.put("priceAmount", delivery.getPriceAmount().toString());
             deliveryData.put("autoAssignDriver", delivery.getAutoAssignDriver());
             deliveryData.put("isScheduled", delivery.getIsScheduled());
+            deliveryData.put("waterQuantityLitres",delivery.getWaterLitreQuantity().toString());
             deliveryData.put("deliveryInstructions", delivery.getDeliveryInstructions());
             deliveryData.put("deliveryStatus", delivery.getDeliveryStatus());
-            deliveryData.put("commissionRequired", delivery.getCommissionRequired() != null ? 
-                delivery.getCommissionRequired().toString() : "0");
+            deliveryData.put("commissionRequired", delivery.getCommissionRequired() != null ?
+                    delivery.getCommissionRequired().toString() : "0");
             deliveryData.put("createdAt", LocalDateTime.now().toString());
 
             // Add dropoff location data
@@ -109,8 +110,10 @@ public class FirebaseWaterServiceImpl implements FirebaseWaterService {
             // Add scheduled details if available
             if (delivery.getScheduledDetails() != null) {
                 Map<String, Object> scheduledData = new HashMap<>();
-                scheduledData.put("scheduledDate", delivery.getScheduledDetails().getScheduledDate());
-                scheduledData.put("scheduledTime", delivery.getScheduledDetails().getScheduledTime());
+                scheduledData.put("scheduledDate", delivery.getScheduledDetails().getScheduledDate() != null ?
+                        delivery.getScheduledDetails().getScheduledDate().toString() : null);
+                scheduledData.put("scheduledTime", delivery.getScheduledDetails().getScheduledTime() != null ?
+                        delivery.getScheduledDetails().getScheduledTime().toString() : null);
                 deliveryData.put("scheduledDetails", scheduledData);
             }
 
@@ -122,7 +125,7 @@ public class FirebaseWaterServiceImpl implements FirebaseWaterService {
                 clientData.put("mobileNumber", delivery.getOrder().getClient().getMobileNumber());
                 deliveryData.put("client", clientData);
             }
-
+            log.info("========> Creating delivery in Firebase for client: {}", delivery.getOrder().getClient().getFullName());
 //            // Add driver information if available
 //            if (delivery.getDriver() != null) {
 //                Map<String, Object> driverData = new HashMap<>();
@@ -149,8 +152,8 @@ public class FirebaseWaterServiceImpl implements FirebaseWaterService {
             // Add geohash data
             deliveryData.put("g", dropoffGeohash);
             deliveryData.put("l", List.of(
-                delivery.getDropOffLocation().getDropOffLatitude(),
-                delivery.getDropOffLocation().getDropOffLongitude()
+                    delivery.getDropOffLocation().getDropOffLatitude(),
+                    delivery.getDropOffLocation().getDropOffLongitude()
             ));
 
             deliveryRef.setValue(deliveryData, (error, ref) -> {
@@ -227,8 +230,8 @@ public class FirebaseWaterServiceImpl implements FirebaseWaterService {
                 if (error != null) {
                     log.error("Failed to delete delivery from Firebase: {}", error.getMessage());
                 } else {
-                    log.info("Successfully deleted delivery from Firebase with ID: {} from bucket: {}", 
-                        deliveryId, finalBucketName);
+                    log.info("Successfully deleted delivery from Firebase with ID: {} from bucket: {}",
+                            deliveryId, finalBucketName);
                 }
             });
         } catch (Exception e) {
@@ -255,7 +258,7 @@ public class FirebaseWaterServiceImpl implements FirebaseWaterService {
             proposalData.put("longitude", proposal.getLongitude());
             proposalData.put("latitude", proposal.getLatitude());
             proposalData.put("totalDeliveries", proposal.getTotalDeliveries());
-            
+
             // Add vehicle information if available
             if (proposal.getActiveVehicle() != null) {
                 Map<String, Object> vehicleData = new HashMap<>();
@@ -273,20 +276,20 @@ public class FirebaseWaterServiceImpl implements FirebaseWaterService {
 
             // Use the proposal ID as the key for this specific proposal
             DatabaseReference proposalRef = deliveryProposalsRef.child(String.valueOf(proposal.getProposalID()));
-            
+
             proposalRef.setValue(proposalData, (error, ref) -> {
                 if (error != null) {
                     log.error("Failed to create delivery proposal in Firebase: {}", error.getMessage());
                 } else {
-                    log.info("Successfully created delivery proposal in Firebase for delivery: {} and driver: {}", 
-                        proposal.getDeliveryID(), proposal.getDriverID());
-                    
+                    log.info("Successfully created delivery proposal in Firebase for delivery: {} and driver: {}",
+                            proposal.getDeliveryID(), proposal.getDriverID());
+
                     // Add to driver proposals after successful creation
                     FirebaseDriverDeliveryProposalsDto driverProposalDto = new FirebaseDriverDeliveryProposalsDto(
-                        proposal.getDriverID(),
-                        proposal.getDeliveryID(),
-                        GenericStatus.OPEN,
-                        proposal.getProposalID()
+                            proposal.getDriverID(),
+                            proposal.getDeliveryID(),
+                            GenericStatus.OPEN,
+                            proposal.getProposalID()
                     );
                     addToDriverProposalForDelivery(driverProposalDto);
                 }
@@ -301,7 +304,7 @@ public class FirebaseWaterServiceImpl implements FirebaseWaterService {
     public void deleteDriverDeliveryProposal(Long proposalId) {
         try {
             DatabaseReference proposalsRef = firebaseDatabase.getReference("deliveryProposals");
-            
+
             // First, we need to find which delivery this proposal belongs to
             proposalsRef.addListenerForSingleValueEvent(new com.google.firebase.database.ValueEventListener() {
                 @Override
@@ -316,8 +319,8 @@ public class FirebaseWaterServiceImpl implements FirebaseWaterService {
                                 } else {
                                     log.info("Successfully deleted delivery proposal from Firebase with ID: {}", proposalId);
                                     // Publish event after successful deletion
-                                    eventPublisher.publishEvent(new ProposalDeletedEvent(this, proposalId, 
-                                        Long.parseLong(deliverySnapshot.getKey())));
+                                    eventPublisher.publishEvent(new ProposalDeletedEvent(this, proposalId,
+                                            Long.parseLong(deliverySnapshot.getKey())));
                                 }
                             });
                             return;
@@ -336,6 +339,7 @@ public class FirebaseWaterServiceImpl implements FirebaseWaterService {
             throw new RuntimeException("Error deleting delivery proposal from Firebase", e);
         }
     }
+
     @Override
     public void updateDeliveryProposalStatuses(Long deliveryId, Long acceptedProposalId, String acceptedStatus, String declinedStatus) {
         try {
@@ -369,15 +373,15 @@ public class FirebaseWaterServiceImpl implements FirebaseWaterService {
                                 updates.put(proposalId + "/status", declinedStatus);
                                 updates.put(proposalId + "/updatedAt", LocalDateTime.now().toString());
                                 log.debug("=======> Marking proposal {} as {}", proposalId, declinedStatus);
-                                
+
                                 // Delete from driver proposals for declined proposals
                                 Long driverId = proposalSnapshot.child("driverID").getValue(Long.class);
                                 if (driverId != null) {
                                     FirebaseDriverDeliveryProposalsDto dto = new FirebaseDriverDeliveryProposalsDto(
-                                        driverId,
-                                        deliveryId,
-                                        GenericStatus.DECLINED,
-                                        Long.parseLong(proposalId)
+                                            driverId,
+                                            deliveryId,
+                                            GenericStatus.DECLINED,
+                                            Long.parseLong(proposalId)
                                     );
                                     deleteDriverProposalForDelivery(dto);
                                 }
@@ -397,17 +401,17 @@ public class FirebaseWaterServiceImpl implements FirebaseWaterService {
                         } else {
                             log.info("========> Successfully updated proposal statuses for delivery {}. Accepted: {}, Declined: {} proposals",
                                     deliveryId, 1, updates.size() / 2 - 1); // Divide by 2 because we update both status and updatedAt
-                            
+
                             // Delete from driver proposals for the accepted proposal
                             DataSnapshot acceptedProposal = snapshot.child(String.valueOf(acceptedProposalId));
                             if (acceptedProposal.exists()) {
                                 Long driverId = acceptedProposal.child("driverID").getValue(Long.class);
                                 if (driverId != null) {
                                     FirebaseDriverDeliveryProposalsDto dto = new FirebaseDriverDeliveryProposalsDto(
-                                        driverId,
-                                        deliveryId,
-                                        GenericStatus.ACCEPTED,
-                                        acceptedProposalId
+                                            driverId,
+                                            deliveryId,
+                                            GenericStatus.ACCEPTED,
+                                            acceptedProposalId
                                     );
                                     deleteDriverProposalForDelivery(dto);
                                 }
@@ -442,8 +446,8 @@ public class FirebaseWaterServiceImpl implements FirebaseWaterService {
             deliveryData.put("isScheduled", delivery.getIsScheduled());
             deliveryData.put("deliveryInstructions", delivery.getDeliveryInstructions());
             deliveryData.put("deliveryStatus", delivery.getDeliveryStatus());
-            deliveryData.put("commissionRequired", delivery.getCommissionRequired() != null ? 
-                delivery.getCommissionRequired().toString() : "0");
+            deliveryData.put("commissionRequired", delivery.getCommissionRequired() != null ?
+                    delivery.getCommissionRequired().toString() : "0");
             deliveryData.put("createdAt", LocalDateTime.now().toString());
 
             // Add dropoff location data
@@ -461,8 +465,10 @@ public class FirebaseWaterServiceImpl implements FirebaseWaterService {
             // Add scheduled details if available
             if (delivery.getScheduledDetails() != null) {
                 Map<String, Object> scheduledData = new HashMap<>();
-                scheduledData.put("scheduledDate", delivery.getScheduledDetails().getScheduledDate());
-                scheduledData.put("scheduledTime", delivery.getScheduledDetails().getScheduledTime());
+                scheduledData.put("scheduledDate", delivery.getScheduledDetails().getScheduledDate() != null ?
+                        delivery.getScheduledDetails().getScheduledDate().toString() : null);
+                scheduledData.put("scheduledTime", delivery.getScheduledDetails().getScheduledTime() != null ?
+                        delivery.getScheduledDetails().getScheduledTime().toString() : null);
                 deliveryData.put("scheduledDetails", scheduledData);
             }
 
@@ -500,14 +506,14 @@ public class FirebaseWaterServiceImpl implements FirebaseWaterService {
 
             // Add geohash data
             String dropoffGeohash = GeoHash.encodeHash(
-                delivery.getDropOffLocation().getDropOffLatitude(),
-                delivery.getDropOffLocation().getDropOffLongitude(),
-                9
+                    delivery.getDropOffLocation().getDropOffLatitude(),
+                    delivery.getDropOffLocation().getDropOffLongitude(),
+                    9
             );
             deliveryData.put("g", dropoffGeohash);
             deliveryData.put("l", List.of(
-                delivery.getDropOffLocation().getDropOffLatitude(),
-                delivery.getDropOffLocation().getDropOffLongitude()
+                    delivery.getDropOffLocation().getDropOffLatitude(),
+                    delivery.getDropOffLocation().getDropOffLongitude()
             ));
 
             // Save the delivery data to Firebase
@@ -582,8 +588,8 @@ public class FirebaseWaterServiceImpl implements FirebaseWaterService {
                 if (error != null) {
                     log.error("Failed to add driver proposal for delivery in Firebase: {}", error.getMessage());
                 } else {
-                    log.info("Successfully added driver proposal for delivery in Firebase - Driver: {}, Delivery: {}", 
-                        dto.getDriverId(), dto.getDeliveryId());
+                    log.info("Successfully added driver proposal for delivery in Firebase - Driver: {}, Delivery: {}",
+                            dto.getDriverId(), dto.getDeliveryId());
                 }
             });
         } catch (Exception e) {
@@ -603,8 +609,8 @@ public class FirebaseWaterServiceImpl implements FirebaseWaterService {
                 if (error != null) {
                     log.error("Failed to delete driver proposal for delivery from Firebase: {}", error.getMessage());
                 } else {
-                    log.info("Successfully deleted driver proposal for delivery from Firebase - Driver: {}, Delivery: {}", 
-                        dto.getDriverId(), dto.getDeliveryId());
+                    log.info("Successfully deleted driver proposal for delivery from Firebase - Driver: {}, Delivery: {}",
+                            dto.getDriverId(), dto.getDeliveryId());
                 }
             });
         } catch (Exception e) {

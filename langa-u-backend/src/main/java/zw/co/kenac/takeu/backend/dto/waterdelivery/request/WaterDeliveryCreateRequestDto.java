@@ -20,6 +20,8 @@ public class WaterDeliveryCreateRequestDto implements Serializable {
     DropOffLocationRequestDto dropOffLocation;
     @NotNull(message = "is scheduled can be either true or false ")
     Boolean isScheduled;
+    @NotNull(message = "quantity can not be null")
+    Integer quantity;
     String deliveryInstructions;
     ScheduledDetailsRequestDto scheduledDetails;
 }

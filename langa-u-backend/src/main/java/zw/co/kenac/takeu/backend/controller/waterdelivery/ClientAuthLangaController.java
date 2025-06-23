@@ -10,15 +10,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import zw.co.kenac.takeu.backend.dto.GenericResponse;
 import zw.co.kenac.takeu.backend.dto.auth.LoginRequest;
-import zw.co.kenac.takeu.backend.dto.auth.client.LoginResponseDto;
-import zw.co.kenac.takeu.backend.dto.auth.client.ClientRegisterRequestDto;
-import zw.co.kenac.takeu.backend.dto.auth.client.NewPasswordRequest;
-import zw.co.kenac.takeu.backend.dto.auth.client.OtpRequest;
-import zw.co.kenac.takeu.backend.dto.auth.client.OtpVerificationDto;
-import zw.co.kenac.takeu.backend.dto.auth.client.PasswordResetOtpRequest;
-import zw.co.kenac.takeu.backend.dto.auth.client.PasswordResetOtpVerifyRequest;
-import zw.co.kenac.takeu.backend.dto.auth.client.SecurityChallengeRequest;
+import zw.co.kenac.takeu.backend.dto.auth.client.*;
 import zw.co.kenac.takeu.backend.service.client.ClientAuthService;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v2/auth")
@@ -30,7 +25,7 @@ public class ClientAuthLangaController {
 
     @Operation(summary = "Request OTP for client registration or login")
     @PostMapping("/request-otp")
-    public ResponseEntity<GenericResponse<?>> requestOtp(@RequestBody OtpRequest otpRequest) {
+    public ResponseEntity<GenericResponse<String>> requestOtp(@RequestBody OtpRequest otpRequest) {
         clientAuthService.requestOtp(otpRequest);
         return ResponseEntity.ok(GenericResponse.success("OTP sent to your phone number or email"));
     }
@@ -56,22 +51,22 @@ public class ClientAuthLangaController {
     }
 
     @PostMapping("/password/request-reset-otp")
-    public ResponseEntity<?> requestPasswordResetOtp(@RequestBody PasswordResetOtpRequest request) {
+    public ResponseEntity<String> requestPasswordResetOtp(@RequestBody PasswordResetOtpRequest request) {
         return ResponseEntity.ok(clientAuthService.requestPasswordResetOtp(request));
     }
 
     @PostMapping("/password/verify-reset-otp")
-    public ResponseEntity<?> verifyPasswordResetOtp(@RequestBody PasswordResetOtpVerifyRequest request) {
+    public ResponseEntity<List<SecurityQuestionDto>> verifyPasswordResetOtp(@RequestBody PasswordResetOtpVerifyRequest request) {
         return ResponseEntity.ok(clientAuthService.verifyPasswordResetOtp(request));
     }
 
     @PostMapping("/password/verify-security-answers")
-    public ResponseEntity<?> verifySecurityAnswers(@RequestBody SecurityChallengeRequest request) {
+    public ResponseEntity<String> verifySecurityAnswers(@RequestBody SecurityChallengeRequest request) {
         return ResponseEntity.ok(clientAuthService.verifySecurityAnswers(request));
     }
 
     @PostMapping("/password/reset-with-token")
-    public ResponseEntity<?> resetPasswordWithToken(@RequestBody NewPasswordRequest request) {
+    public ResponseEntity<String> resetPasswordWithToken(@RequestBody NewPasswordRequest request) {
         return ResponseEntity.ok(clientAuthService.resetPasswordWithToken(request));
     }
 }

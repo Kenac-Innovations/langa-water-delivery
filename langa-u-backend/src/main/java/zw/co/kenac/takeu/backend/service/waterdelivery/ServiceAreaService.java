@@ -18,7 +18,7 @@ public interface ServiceAreaService {
 
     ServiceAreaResponse updateServiceArea(Long id, ServiceAreaRequest request);
 
- ServiceAreaResponse getServiceArea(Long id);
+    ServiceAreaResponse getServiceArea(Long id);
 
     List<ServiceAreaResponse> getAllServiceAreas();
 
