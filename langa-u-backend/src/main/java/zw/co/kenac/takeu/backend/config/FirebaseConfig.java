@@ -24,7 +24,7 @@ public class FirebaseConfig {
 
                 FirebaseOptions options = FirebaseOptions.builder()
                         .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                        .setDatabaseUrl("https://takeu-1f5d3-default-rtdb.firebaseio.com")
+                        .setDatabaseUrl("https://langas-3ab06-default-rtdb.firebaseio.com")
                         .build();
 
                 FirebaseApp.initializeApp(options);
@@ -43,5 +43,6 @@ public class FirebaseConfig {
        // database.setPersistenceEnabled(true); todo this is the thing that gave me issue nxaaa
         log.info("Firebase database has been initialized");
         return database;
+
     }
 } 

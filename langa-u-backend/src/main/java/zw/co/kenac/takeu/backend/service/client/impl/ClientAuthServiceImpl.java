@@ -10,12 +10,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import zw.co.kenac.takeu.backend.dto.auth.LoginRequest;
 import zw.co.kenac.takeu.backend.dto.auth.PasswordLinkRequest;
-import zw.co.kenac.takeu.backend.walletmodule.utils.JsonUtil;
 import zw.co.kenac.takeu.backend.dto.auth.PasswordResetRequest;
 import zw.co.kenac.takeu.backend.dto.auth.VerifyAccountRequest;
 import zw.co.kenac.takeu.backend.dto.auth.client.*;
+import zw.co.kenac.takeu.backend.dto.auth.driver.DriverProfileResponse;
 import zw.co.kenac.takeu.backend.exception.custom.ResourceNotFoundException;
-import zw.co.kenac.takeu.backend.exception.custom.UrlAuthorizationException;
 import zw.co.kenac.takeu.backend.mailer.JavaMailService;
 import zw.co.kenac.takeu.backend.model.*;
 import zw.co.kenac.takeu.backend.repository.*;
@@ -27,8 +26,6 @@ import zw.co.kenac.takeu.backend.repository.SecurityQuestionsRepository;
 import zw.co.kenac.takeu.backend.model.ClientSecurityAnswerEntity;
 import zw.co.kenac.takeu.backend.model.SecurityQuestionsEntity;
 import zw.co.kenac.takeu.backend.sms.SmsService;
-import zw.co.kenac.takeu.backend.mailer.dto.EmailGenericDto;
-import zw.co.kenac.takeu.backend.walletmodule.utils.JsonUtil;
 
 import java.math.BigDecimal;
 import java.security.SecureRandom;
@@ -36,7 +33,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.UUID;
@@ -65,12 +61,12 @@ public class ClientAuthServiceImpl implements ClientAuthService {
     private final SmsService smsService;
 
     @Override
-    public ClientLoginResponse login(LoginRequest loginRequest) {
+    public LoginResponseDto login(LoginRequest loginRequest) {
         UserEntity loginUser = userRepository.findByEmailAddressOrMobileNumber(loginRequest.loginId())
                 .orElseThrow(() -> new ResourceNotFoundException(USER_MISSING));
 
-        if (!Objects.equals(loginUser.getUserType(), "CLIENT"))
-            throw new UrlAuthorizationException("You are not allowed to login. Please register a CUSTOMER account.");
+//        if (!Objects.equals(loginUser.getUserType(), "CLIENT"))
+//            throw new UrlAuthorizationException("You are not allowed to login. Please register a CUSTOMER account.");
 
         authenticate(loginRequest.loginId(), loginRequest.password());
 
@@ -78,21 +74,28 @@ public class ClientAuthServiceImpl implements ClientAuthService {
 
         String accessToken = getAccessToken(userPrincipal);
         String refreshToken = getRefreshToken(userPrincipal);
+        return  LoginResponseDto.builder().// todo remember to cater for dispatchers
+                accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .userType(loginUser.getUserType())
+                .userID(loginUser.getEntityId())
+                .userProfile( loginUser.getUserType().equals("CLIENT") ? new ClientProfileResponse().builder()
+                        .isCreditedAllowed(loginUser.getCustomer().getIsCreditAllowed())
+                        .email(loginUser.getCustomer().getEmailAddress())
+                        .phoneNumber(loginUser.getCustomer().getMobileNumber())
+                        .userId(loginUser.getEntityId())
+                        .firstName(loginUser.getFirstname())
+                        .build() : null)
+                .driverProfile(loginUser.getUserType().equals("DRIVER") ? new DriverProfileResponse().builder()
+                        .driverID(loginUser.getDriver().getEntityId())
+                        .email(loginUser.getEmailAddress())
+                        .phoneNumber(loginUser.getMobileNumber())
+                        .nationalIdNumber(loginUser.getDriver().getNationalIdImage()).build() : null)
+                .build();
 
-        return new ClientLoginResponse(
-                accessToken,
-                refreshToken,
-                loginUser.getUserType() != null ? loginUser.getUserType() : "CLIENT",
-                loginUser.getEntityId(),
-                new ClientProfileResponse(
-                        loginUser.getEntityId(),
-                        loginUser.getCustomer().getEmailAddress(),
-                        loginUser.getCustomer().getMobileNumber(),
-                        loginUser.getFirstname(),
-                        loginUser.getLastname(),
-                        BigDecimal.ZERO
-                )
-        );
+
+
+
     }
 
     @Override
@@ -134,7 +137,7 @@ public class ClientAuthServiceImpl implements ClientAuthService {
     }
 
     @Override
-    public ClientLoginResponse registerClient(ClientRegisterRequestDto requestDto) {
+    public LoginResponseDto registerClient(ClientRegisterRequestDto requestDto) {
         UserEntity userEntity = new UserEntity();
 
         userEntity.setFirstname(requestDto.getFullName());
@@ -156,9 +159,10 @@ public class ClientAuthServiceImpl implements ClientAuthService {
         UserEntity user = userRepository.save(userEntity);
 
         ClientEntity client = new ClientEntity();
-        client.setFullName(requestDto.getFullName ());
+        client.setFullName(requestDto.getFullName());
         client.setLastname(requestDto.getFullName());
         client.setEmailAddress(requestDto.getEmail());
+        client.setIsCreditAllowed(false);
 
         client.setMobileNumber(requestDto.getPhoneNumber());
         client.setCommunicationChannels(requestDto.getCommChannels());
@@ -166,6 +170,7 @@ public class ClientAuthServiceImpl implements ClientAuthService {
         ClientAddressesEntity clientAddresses = ClientAddressesEntity.builder()
                 .addressEntered(requestDto.getAddress().getAddressEntered())
                 .addressFormatted(requestDto.getAddress().getAddressFormatted())
+                .isDefault(true)
                 .latitude(requestDto.getAddress().getLatitude())
                 .longitude(requestDto.getAddress().getLongitude())
                 .title("Home Address")
@@ -186,7 +191,7 @@ public class ClientAuthServiceImpl implements ClientAuthService {
                     .map(answerDto -> {
                         SecurityQuestionsEntity question = securityQuestionsRepository.findById(answerDto.getQuestionId())
                                 .orElseThrow(() -> new ResourceNotFoundException("Security question not found with id: " + answerDto.getQuestionId()));
-                        
+
                         return ClientSecurityAnswerEntity.builder()
                                 .client(clientEntity)
                                 .securityQuestion(question)
@@ -194,28 +199,25 @@ public class ClientAuthServiceImpl implements ClientAuthService {
                                 .build();
                     })
                     .collect(Collectors.toList());
-            
+
             clientSecurityAnswerRepository.saveAll(securityAnswers);
         }
 
         UserPrincipal userPrincipal = new UserPrincipal(user);
         String accessToken = getAccessToken(userPrincipal);
         String refreshToken = getRefreshToken(userPrincipal);
-
-        return new ClientLoginResponse(
-                accessToken,
-                refreshToken,
-                user.getUserType(),
-                user.getEntityId(),
-                new ClientProfileResponse(
-                        user.getEntityId(),
-                        user.getCustomer().getEmailAddress(),
-                        user.getCustomer().getMobileNumber(),
-                        user.getFirstname(),
-                        user.getLastname(),
-                        BigDecimal.ZERO
-                )
-        );
+ return LoginResponseDto.builder().
+        accessToken(accessToken)
+         .refreshToken(refreshToken)
+         .userType(user.getUserType())
+         .userID(user.getEntityId())
+         .userProfile( new ClientProfileResponse().builder()
+                 .isCreditedAllowed(user.getCustomer().getIsCreditAllowed())
+                 .email(user.getCustomer().getEmailAddress())
+                 .phoneNumber(user.getCustomer().getMobileNumber())
+                 .userId(user.getEntityId())
+                 .firstName(user.getFirstname())
+                 .build()).build();
     }
 
     @Override
@@ -223,11 +225,11 @@ public class ClientAuthServiceImpl implements ClientAuthService {
         if (otpVerificationDto.getOtp() == null || otpVerificationDto.getOtp().isBlank()) {
             throw new IllegalArgumentException("OTP is required");
         }
-        OtpVerification otpVerification = otpVerificationRepository.findByOtpAndLoginId(otpVerificationDto.getPhoneOrEmail(),otpVerificationDto.getOtp()).orElseThrow(() -> new ResourceNotFoundException("Invalid OTP"));
-        if(otpVerification.getVerified()!=null && otpVerification.getVerified()){
+        OtpVerification otpVerification = otpVerificationRepository.findByOtpAndLoginId(otpVerificationDto.getPhoneOrEmail(), otpVerificationDto.getOtp()).orElseThrow(() -> new ResourceNotFoundException("Invalid OTP"));
+        if (otpVerification.getVerified() != null && otpVerification.getVerified()) {
             throw new RuntimeException("Otp already used.");
         }
-        if(otpVerification.getExpired()!=null && otpVerification.getExpired() || otpVerification.getExpiryDate().isBefore(LocalDateTime.now())){
+        if (otpVerification.getExpired() != null && otpVerification.getExpired() || otpVerification.getExpiryDate().isBefore(LocalDateTime.now())) {
             throw new RuntimeException("Otp expired.");
         }
         otpVerification.setVerified(true);
@@ -298,7 +300,7 @@ public class ClientAuthServiceImpl implements ClientAuthService {
 
         passwordResetTokenRepository.save(passwordResetToken);
 
-        String resetLink =resetCode;
+        String resetLink = resetCode;
 
         String userName = user.getFirstname() + " " + user.getLastname();
         mailService.sendPasswordResetEmail(user.getEmailAddress(), userName, resetCode, resetLink);
@@ -328,7 +330,7 @@ public class ClientAuthServiceImpl implements ClientAuthService {
         otpVerificationRepository.save(otpVerification);
 
         // Assuming a mail service exists to send the OTP
-        mailService.sendPasswordResetEmail(user.getEmailAddress(), user.getFirstname(), otp,"");
+        mailService.sendPasswordResetEmail(user.getEmailAddress(), user.getFirstname(), otp, "");
 
         return "An OTP has been sent to your email address.";
     }
@@ -466,9 +468,9 @@ public class ClientAuthServiceImpl implements ClientAuthService {
 
         passwordResetToken.setUsed(true);
         passwordResetTokenRepository.save(passwordResetToken);
-        
+
         // Send confirmation email
-      //  mailService.sendPasswordResetEmail(user.getEmailAddress(), user.getFirstname(), resetCode, "");
+        //  mailService.sendPasswordResetEmail(user.getEmailAddress(), user.getFirstname(), resetCode, "");
 
         return "Password has been reset successfully.";
     }
@@ -519,7 +521,6 @@ public class ClientAuthServiceImpl implements ClientAuthService {
         if (userRepository.findByEmailAddressOrMobileNumberAndRole(otpRequest.getPhoneNumber(), "CLIENT").isPresent() && userRepository.findByEmailAddressOrMobileNumberAndRole(otpRequest.getPhoneNumber(), "CLIENT").get().isEnabled()) {
             throw new RuntimeException("User with this phone number already exists.");
         }
-
 
 
         String otp = new Random().ints(100000, 999999)

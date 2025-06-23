@@ -1,5 +1,6 @@
 package zw.co.kenac.takeu.backend.dto.waterdelivery.request;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.Value;
 import zw.co.kenac.takeu.backend.model.enumeration.PaymentType;
@@ -19,9 +20,11 @@ import java.util.List;
 @Builder
 public class WaterOrderCreateRequestDto implements Serializable {
     Long entityId;
+    @NotNull(message = "client id has to be specified ")
     Long clientId;
     LocalDateTime createdDate;
     LocalDateTime lastModifiedDate;
+    @NotNull(message = "payment Type has to be specified")
     PaymentType paymentType;
     String promoCode;
     OrderStatus orderStatus;

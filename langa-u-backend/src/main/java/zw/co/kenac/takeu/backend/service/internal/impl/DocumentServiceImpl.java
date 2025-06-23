@@ -3,6 +3,7 @@ package zw.co.kenac.takeu.backend.service.internal.impl;
 import io.minio.*;
 import io.minio.http.Method;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import zw.co.kenac.takeu.backend.config.MinioConfig;
@@ -14,6 +15,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Service
+@ConditionalOnProperty(name = "minio.enabled", havingValue = "true", matchIfMissing = false)
 public class DocumentServiceImpl implements DocumentService {
 
     @Autowired

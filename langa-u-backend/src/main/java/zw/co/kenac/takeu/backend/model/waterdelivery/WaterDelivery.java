@@ -32,6 +32,7 @@ public class WaterDelivery extends BaseEntity {
 
     @Column(precision = 30, scale = 4)
     private BigDecimal priceAmount;
+    private Integer waterLitreQuantity;
 
     private Boolean autoAssignDriver;
     @Embedded

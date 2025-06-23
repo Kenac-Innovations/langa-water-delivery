@@ -55,6 +55,7 @@ logging:
     org.springframework.security: DEBUG
 
 minio:
+  enabled: true
   # Legacy configuration (will be mapped to primary)
   endpoint: http://${HOST}:9000
   accessKey: JOYIaxzHzCAqcrWPHJgO

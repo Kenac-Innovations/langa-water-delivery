@@ -22,7 +22,7 @@ public class ClientEntity extends AbstractEntity {
     private String middleName;
 
     private String lastname;
-    private Boolean isCreditAllowed;
+    private Boolean isCreditAllowed=false;
 
     private String mobileNumber;
     @ElementCollection(targetClass = CommChannels.class)

@@ -42,7 +42,7 @@ public class WaterOrderController {
         return ResponseEntity.ok(GenericResponse.success(orders));
     }
     @Operation(summary = "Get client recent Deliveries")
-    @GetMapping("/{clientId}")
+    @GetMapping("/client/{clientId}")
     public ResponseEntity<GenericResponse<PaginatedResponse<WaterOrderResponse>>> getClientOrder(@PathVariable Long clientId,@RequestParam(defaultValue = "ALL") String status,
                                                                                   @RequestParam(defaultValue = "1") int pageNumber,
                                                                                   @RequestParam(defaultValue = "25") int pageSize) {

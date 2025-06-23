@@ -33,6 +33,7 @@ import java.time.LocalDateTime;
 public class ClientAddressesEntity extends AbstractEntity {
     private String title;
     private String addressEntered;
+    private Boolean isDefault;
     private double latitude;
     private double longitude;
     private String addressFormatted;

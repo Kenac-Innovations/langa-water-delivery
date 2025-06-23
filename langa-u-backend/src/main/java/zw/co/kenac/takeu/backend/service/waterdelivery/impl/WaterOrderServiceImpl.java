@@ -1,6 +1,8 @@
 package zw.co.kenac.takeu.backend.service.waterdelivery.impl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -15,6 +17,7 @@ import zw.co.kenac.takeu.backend.dto.waterdelivery.request.WaterDeliveryCreateRe
 import zw.co.kenac.takeu.backend.dto.waterdelivery.request.WaterOrderCreateRequestDto;
 import zw.co.kenac.takeu.backend.dto.waterdelivery.response.WaterDeliveryResponse;
 import zw.co.kenac.takeu.backend.dto.waterdelivery.response.WaterOrderResponse;
+import zw.co.kenac.takeu.backend.event.deliveryEvents.WaterDeliveryCreatedEvent;
 import zw.co.kenac.takeu.backend.exception.custom.ResourceNotFoundException;
 import zw.co.kenac.takeu.backend.model.ClientAddressesEntity;
 import zw.co.kenac.takeu.backend.model.ClientEntity;
@@ -38,6 +41,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -48,6 +52,7 @@ public class WaterOrderServiceImpl implements WaterOrderService {
     private final ClientRepository clientRepository;
     private final PromotionsRepository promotionsRepository;
     private final ClientAddressRepository clientAddressRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public WaterOrderResponse createOrder(WaterOrderCreateRequestDto request) {
@@ -57,7 +62,7 @@ public class WaterOrderServiceImpl implements WaterOrderService {
         BigDecimal totalAmount = request.getDeliveries().stream()
                 .map(WaterDeliveryCreateRequestDto::getPriceAmount)
                 .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .reduce(BigDecimal.ZERO, BigDecimal::add);//todo , to fix the calculation of the prices
 
         WaterOrder order = new WaterOrder();
         order.setClient(client);
@@ -132,6 +137,7 @@ public class WaterOrderServiceImpl implements WaterOrderService {
         delivery.setPriceAmount(request.getPriceAmount());
         delivery.setAutoAssignDriver(request.getAutoAssignDriver());
         delivery.setIsScheduled(request.getIsScheduled());
+        delivery.setWaterLitreQuantity(request.getQuantity());
         delivery.setCompletionOtp(HelpFunctions.generateOtp());
         delivery.setDeliveryInstructions(request.getDeliveryInstructions());
         if(order.getPaymentType().equals(PaymentType.CREDIT)||order.getPaymentType().equals(PaymentType.ON_DELIVERY)){
@@ -149,7 +155,13 @@ public class WaterOrderServiceImpl implements WaterOrderService {
             delivery.setScheduledDetails(mapScheduledDetails(request.getScheduledDetails()));
         }
 
-        return waterDeliveryRepository.save(delivery);
+        WaterDelivery createdDelivery = waterDeliveryRepository.save(delivery);
+        if(!order.getPaymentType().equals(PaymentType.INSTANT)){// meaning if its not instant we wait for the payment to be confirmed
+            log.info("========> Delivery created with id: {}", createdDelivery.getEntityId());
+            eventPublisher.publishEvent(new WaterDeliveryCreatedEvent(this,createdDelivery));
+        }
+
+        return createdDelivery;
     }
 
     private DropOffLocation mapDropOffLocation(DropOffLocationRequestDto dto, WaterOrder order) {
