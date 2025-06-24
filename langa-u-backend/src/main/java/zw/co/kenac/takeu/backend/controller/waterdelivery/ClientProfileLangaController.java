@@ -11,6 +11,7 @@ import zw.co.kenac.takeu.backend.dto.GenericResponse;
 import zw.co.kenac.takeu.backend.dto.auth.client.ClientRegisterRequestDto;
 import zw.co.kenac.takeu.backend.dto.auth.client.LoginResponseDto;
 import zw.co.kenac.takeu.backend.dto.auth.client.OtpRequest;
+import zw.co.kenac.takeu.backend.dto.client.ClientAddressRequestDto;
 import zw.co.kenac.takeu.backend.model.ClientAddressesEntityResponseDto;
 import zw.co.kenac.takeu.backend.service.client.ClientProfileService;
 
@@ -50,6 +51,21 @@ public class ClientProfileLangaController {
             @PathVariable Long clientId) {
 
         return ResponseEntity.ok(GenericResponse.success(clientProfileService.getAddresses(clientId)));
+    }
+
+    @Operation(summary = "Create a new address for a client")
+    @PostMapping("/address/create")
+    public ResponseEntity<GenericResponse<String>> createClientAddress(@RequestBody ClientAddressRequestDto dto) {
+        clientProfileService.createAddress(dto);
+        return ResponseEntity.ok(GenericResponse.success("Address created successfully"));
+    }
+
+    @Operation(summary = "Update an existing address")
+    @PutMapping("/address/update/{addressId}")
+    public ResponseEntity<GenericResponse<String>> updateClientAddress(@PathVariable Long addressId,
+                                                                       @RequestBody ClientAddressRequestDto dto) {
+        clientProfileService.updateAddress(addressId, dto);
+        return ResponseEntity.ok(GenericResponse.success("Address updated successfully"));
     }
 
 }
