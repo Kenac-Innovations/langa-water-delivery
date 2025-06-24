@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 import zw.co.kenac.takeu.backend.dto.CustomPagination;
 import zw.co.kenac.takeu.backend.dto.PaginatedResponse;
 import zw.co.kenac.takeu.backend.dto.waterdelivery.response.WaterDeliveryResponse;
-import zw.co.kenac.takeu.backend.dto.waterdelivery.response.WaterOrderResponse;
 import zw.co.kenac.takeu.backend.exception.custom.ResourceNotFoundException;
 import zw.co.kenac.takeu.backend.model.waterdelivery.WaterDelivery;
 import zw.co.kenac.takeu.backend.repository.WaterDeliveryRepository;
@@ -102,7 +101,7 @@ public class WaterDeliveryServiceImpl implements WaterDeliveryService {
                 .priceAmount(delivery.getPriceAmount())
                 .autoAssignDriver(delivery.getAutoAssignDriver())
                 .dropOffLocation(delivery.getDropOffLocation())
-                .waterLitreQuantity(delivery.getWaterLitreQuantity())
+                .quantity(delivery.getWaterLitreQuantity())
                 .isScheduled(delivery.getIsScheduled())
                 .deliveryInstructions(delivery.getDeliveryInstructions())
                 .scheduledDetails(delivery.getScheduledDetails())
