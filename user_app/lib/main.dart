@@ -13,9 +13,11 @@ import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_state.dart';
 import 'package:langas_user/bloc/auth/login_bloc/login_bloc_bloc.dart';
 import 'package:langas_user/bloc/auth/password_reset_bloc/password_reset_bloc_bloc.dart';
 import 'package:langas_user/bloc/auth/register_bloc/register_bloc_bloc.dart';
+import 'package:langas_user/bloc/bloc/water_order_bloc_bloc.dart';
 import 'package:langas_user/bloc/promotions/promotions_bloc_bloc.dart';
 import 'package:langas_user/repository/auth_repository.dart';
 import 'package:langas_user/repository/promotions_repository.dart';
+import 'package:langas_user/repository/water_order_repository.dart';
 
 import 'package:langas_user/services/fcm_service.dart';
 import 'package:langas_user/services/firebase_driver_service.dart';
@@ -55,6 +57,7 @@ void main() async {
   final promotionsRepository = PromotionsRepository(
     dioClient: dioClient,
   );
+  final waterOrderRepository = WaterOrderRepository(dioClient: dioClient);
 
   final fcmService = FCMService(
     firebaseMessaging: FirebaseMessaging.instance,
@@ -62,6 +65,7 @@ void main() async {
     secureStorageService: secureStorageService,
     flutterLocalNotificationsPlugin: flutterLocalNotificationsPlugin,
   );
+
   await fcmService.initialize();
 
   runApp(
@@ -74,6 +78,7 @@ void main() async {
         RepositoryProvider.value(value: fcmService),
         RepositoryProvider.value(value: firebaseDriverService),
         RepositoryProvider.value(value: promotionsRepository),
+        RepositoryProvider.value(value: waterOrderRepository),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -102,6 +107,11 @@ void main() async {
           BlocProvider<PromotionsBloc>(
             create: (context) => PromotionsBloc(
               promotionsRepository: context.read<PromotionsRepository>(),
+            ),
+          ),
+          BlocProvider<WaterOrderBloc>(
+            create: (context) => WaterOrderBloc(
+              waterOrderRepository: context.read<WaterOrderRepository>(),
             ),
           ),
         ],

@@ -34,4 +34,16 @@ class ApiConstants {
   // === User Device FCM Token Registration ===
   static String registerDeviceToken(String userId) =>
       '/api/v1/users/$userId/devices';
+
+  // Water Orders Endpoints
+  static const String createWaterOrder = '/api/v2/water-orders/create';
+  static String waterOrderById(int orderId) => '/api/v2/water-orders/$orderId';
+  static String clientRecentDeliveries(int clientId) =>
+      '/api/v2/water-orders/client/$clientId';
+
+  // Water Deliveries Endpoints
+  static String waterDeliveryById(int orderId) =>
+      '/api/v2/water-deliveries/getbyId/$orderId';
+  static String allWaterDeliveriesByClientId(int clientId) =>
+      '/api/v2/water-deliveries/client/$clientId';
 }

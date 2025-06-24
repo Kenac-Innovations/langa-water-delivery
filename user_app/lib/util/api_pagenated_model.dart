@@ -1,4 +1,5 @@
 import 'package:langas_user/dto/delivery_dto.dart';
+import 'package:langas_user/dto/pagination_dto.dart';
 
 class PaginatedResponse<T> {
   final List<T> content;

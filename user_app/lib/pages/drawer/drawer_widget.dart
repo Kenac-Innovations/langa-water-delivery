@@ -19,9 +19,8 @@ class AppDrawer extends StatelessWidget {
           currentUser = state.user;
         }
 
-        String displayName = currentUser != null
-            ? '${currentUser.firstName} ${currentUser.lastName}'.trim()
-            : 'Guest User';
+        String displayName =
+            currentUser != null ? currentUser.firstName.trim() : 'Guest User';
         String displayEmail = currentUser?.email ?? 'Not logged in';
 
         return Drawer(
@@ -79,7 +78,7 @@ class AppDrawer extends StatelessWidget {
                           title: 'Orders',
                           onTap: () {
                             context.pop();
-                            context.pushNamed('Current_Deliveries');
+                            context.pushNamed('My_Orders');
                           },
                         ),
                         _buildDivider(context),

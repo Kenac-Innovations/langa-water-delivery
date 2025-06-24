@@ -94,3 +94,70 @@ enum NotificationType {
     );
   }
 }
+
+enum WaterDeliveryStatus {
+  OPEN,
+  ASSIGNED,
+  PICKED_UP,
+  ON_ROUTE,
+  COMPLETED,
+  CANCELLED,
+  CREATED,
+  UNKNOWN;
+
+  String toJson() => name;
+
+  static WaterDeliveryStatus fromJson(String? value) {
+    return WaterDeliveryStatus.values.firstWhere(
+        (e) => e.name == value?.toUpperCase(),
+        orElse: () => WaterDeliveryStatus.UNKNOWN);
+  }
+}
+
+enum WaterOrderStatus {
+  CREATED,
+  CONFIRMED,
+  PROCESSING,
+  COMPLETED,
+  CANCELLED,
+  UNKNOWN;
+
+  String toJson() => name;
+
+  static WaterOrderStatus fromJson(String? value) {
+    return WaterOrderStatus.values.firstWhere(
+        (e) => e.name == value?.toUpperCase(),
+        orElse: () => WaterOrderStatus.UNKNOWN);
+  }
+}
+
+enum WaterPaymentType {
+  CREDIT,
+  ON_DELIVERY,
+  INSTANT,
+  UNKNOWN;
+
+  String toJson() => name;
+
+  static WaterPaymentType fromJson(String? value) {
+    return WaterPaymentType.values.firstWhere(
+        (e) => e.name == value?.toUpperCase(),
+        orElse: () => WaterPaymentType.UNKNOWN);
+  }
+}
+
+enum WaterPaymentStatus {
+  PENDING,
+  PAID,
+  FAILED,
+  REFUNDED,
+  UNKNOWN;
+
+  String toJson() => name;
+
+  static WaterPaymentStatus fromJson(String? value) {
+    return WaterPaymentStatus.values.firstWhere(
+        (e) => e.name == value?.toUpperCase(),
+        orElse: () => WaterPaymentStatus.UNKNOWN);
+  }
+}

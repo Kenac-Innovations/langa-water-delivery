@@ -1,4 +1,5 @@
 import 'package:langas_user/dto/delivery_dto.dart';
+import 'package:langas_user/dto/pagination_dto.dart';
 import 'package:langas_user/models/notifications_model.dart';
 import 'package:langas_user/util/api_pagenated_model.dart';
 import 'package:langas_user/util/apps_enums.dart';

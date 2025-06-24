@@ -219,57 +219,8 @@ class CreateDeliveryRequestDto {
   }
 }
 
-class PaginationDto {
-  final int total;
-  final int totalPages;
-  final int pageNumber;
-  final int pageSize;
 
-  PaginationDto({
-    required this.total,
-    required this.totalPages,
-    required this.pageNumber,
-    required this.pageSize,
-  });
 
-  factory PaginationDto.fromJson(Map<String, dynamic> json) {
-    return PaginationDto(
-      total: json['total'] as int? ?? 0,
-      totalPages: json['totalPages'] as int? ?? json['pages'] as int? ?? 0,
-      pageNumber: json['pageNumber'] as int? ?? json['page'] as int? ?? 0,
-      pageSize: json['pageSize'] as int? ?? json['limit'] as int? ?? 0,
-    );
-  }
-}
-
-class PaginatedDeliveryResponseDto {
-  final List<DeliveryDto>? content;
-  final PaginationDto? pagination;
-
-  PaginatedDeliveryResponseDto({
-    this.content,
-    this.pagination,
-  });
-
-  factory PaginatedDeliveryResponseDto.fromJson(Map<String, dynamic> json) {
-    return PaginatedDeliveryResponseDto(
-      content: (json['content'] as List<dynamic>?)
-          ?.map((item) => DeliveryDto.fromJson(item as Map<String, dynamic>))
-          .toList(),
-      pagination: json['pagination'] != null
-          ? PaginationDto.fromJson(json['pagination'] as Map<String, dynamic>)
-          : null,
-    );
-  }
-
-  PaginatedResponse<Delivery> toDomain() {
-    return PaginatedResponse(
-      content: content?.map((dto) => dto.toDomain()).toList() ?? [],
-      pagination: pagination ??
-          PaginationDto(total: 0, totalPages: 0, pageNumber: 0, pageSize: 0),
-    );
-  }
-}
 
 class SelectDriverRequestDto {
   final int deliveryId;

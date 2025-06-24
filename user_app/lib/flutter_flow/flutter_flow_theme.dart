@@ -253,7 +253,7 @@ class ThemeTypography extends Typography {
   String get titleMediumFamily => 'Readex Pro';
   TextStyle get titleMedium => GoogleFonts.getFont(
         'Readex Pro',
-        color: theme.info,
+        color: theme.primaryText,
         fontWeight: FontWeight.normal,
         fontSize: 18.0,
       );

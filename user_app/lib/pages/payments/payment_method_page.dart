@@ -99,7 +99,7 @@ class _PaymentMethodPageState extends State<PaymentMethodPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Other Cards',
+                const Text('Other Cards',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,

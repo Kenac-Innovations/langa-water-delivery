@@ -13,7 +13,7 @@ import 'package:langas_user/bloc/auth/register_bloc/register_bloc_state.dart';
 import 'package:langas_user/dto/auth_dto.dart';
 import 'package:langas_user/flutter_flow/flutter_flow_theme.dart';
 import 'package:langas_user/models/security_question_model.dart';
-import 'package:langas_user/pages/create_delivery/location_picker_page.dart';
+import 'package:langas_user/pages/create_water_order/location_picker_page.dart';
 import 'package:pinput/pinput.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 

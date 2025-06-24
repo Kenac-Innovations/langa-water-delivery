@@ -5,11 +5,11 @@ import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platf
 import 'package:langas_user/pages/address/address_page.dart';
 
 import 'package:langas_user/pages/change_password/change_password_widget.dart';
-import 'package:langas_user/pages/create_delivery/create_delivery_order.dart';
-import 'package:langas_user/pages/current_deliveries/current_deliveries_widget.dart';
+import 'package:langas_user/pages/create_water_order/create_water_order_page.dart';
 import 'package:langas_user/pages/delivery_history/delivery_history_widget.dart';
 import 'package:langas_user/pages/edit_profile/edit_profile_widget.dart';
 import 'package:langas_user/pages/forgot_password/forgot_password_widget.dart';
+import 'package:langas_user/pages/my_orders/my_orders_page.dart';
 import 'package:langas_user/pages/my_wallet/my_wallet_widget.dart';
 import 'package:langas_user/pages/notification/notification_widget.dart';
 import 'package:langas_user/pages/payments/payment_method_page.dart';
@@ -93,14 +93,14 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           builder: (context, state) => const EditProfileWidget(),
         ),
         GoRoute(
-          name: 'Current_Deliveries',
-          path: '/currentDeliveries',
-          builder: (context, state) => const CurrentDeliveriesWidget(),
+          name: 'My_Orders',
+          path: '/myOrders',
+          builder: (context, state) => const MyOrdersPage(),
         ),
         GoRoute(
           name: 'Create_Delivery',
           path: '/createDelivery',
-          builder: (context, state) => const MultiStepDelivery(),
+          builder: (context, state) => const CreateWaterOrderPage(),
         ),
         GoRoute(
           name: 'Notification',
