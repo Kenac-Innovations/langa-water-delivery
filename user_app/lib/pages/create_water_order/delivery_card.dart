@@ -115,7 +115,6 @@ class _DeliveryCardState extends State<DeliveryCard> {
               hintText: 'e.g., House 123, Main Street',
               maxLines: 2,
             ),
-            const SizedBox(height: 8),
             GestureDetector(
               onTap: () async {
                 final result = await Navigator.push<LocationResult>(
@@ -162,6 +161,14 @@ class _DeliveryCardState extends State<DeliveryCard> {
                 ),
               ),
             ),
+            if (widget.delivery.latLng == null)
+              const Padding(
+                padding: EdgeInsets.only(top: 8.0),
+                child: Text(
+                  'Disclaimer: Without a map pin, we cannot determine if your address is in our service area.',
+                  style: TextStyle(color: Colors.orange, fontSize: 12),
+                ),
+              ),
             const SizedBox(height: 16),
             if (widget.currentUser != null)
               CheckboxListTile(

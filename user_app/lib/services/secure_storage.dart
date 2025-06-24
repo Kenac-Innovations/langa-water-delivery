@@ -39,7 +39,7 @@ class SecureStorageService {
           'phoneNumber': authResult.userProfile.phoneNumber,
           'firstName': authResult.userProfile.firstName,
           'lastName': authResult.userProfile.lastName,
-          'walletBalance': authResult.userProfile.walletBalance,
+          'isCreditedAllowed': authResult.userProfile.isCreditAllowed,
         }
       });
       await write(key: _authResultKey, value: authResultString);
@@ -98,7 +98,7 @@ class SecureStorageService {
         'phoneNumber': user.phoneNumber,
         'firstName': user.firstName,
         'lastName': user.lastName,
-        'walletBalance': user.walletBalance,
+        'isCreditedAllowed': user.isCreditAllowed,
       };
       final String userJson = jsonEncode(userMap);
       await write(key: _userDetailsKey, value: userJson);

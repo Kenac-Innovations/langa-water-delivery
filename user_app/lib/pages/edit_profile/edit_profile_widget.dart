@@ -152,12 +152,11 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
 
     return Column(
       children: [
-        _buildProfileDetailRow('First Name', _currentUser.firstName),
-        _buildProfileDetailRow('Last Name', _currentUser.lastName),
+        _buildProfileDetailRow('Full Name', _currentUser.firstName),
         _buildProfileDetailRow('Email', _currentUser.email),
         _buildProfileDetailRow('Mobile', _currentUser.phoneNumber),
-        _buildProfileDetailRow('Wallet Balance',
-            currencyFormat.format(_currentUser.walletBalance)),
+        _buildProfileDetailRow('Credit Allowed',
+            _currentUser.isCreditAllowed.toString().toUpperCase()),
       ],
     );
   }

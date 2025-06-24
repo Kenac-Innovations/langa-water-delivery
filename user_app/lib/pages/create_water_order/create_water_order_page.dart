@@ -38,7 +38,7 @@ class DeliveryModel {
     this.latLng,
     this.isScheduled = false,
     this.useMyDetails = false,
-    this.pickedAddressDisplay = "Tap to pin location on map (Required)",
+    this.pickedAddressDisplay = "Tap to pin location on map (Optional)",
   });
 
   void dispose() {
@@ -110,26 +110,17 @@ class _CreateWaterOrderPageState extends State<CreateWaterOrderPage> {
 
   void _calculatePrices() {
     double total = 0;
-    if (_deliveries.isEmpty) {
-      _showErrorToast("Please add at least one delivery location.");
-      return;
-    }
-
     for (var delivery in _deliveries) {
       final quantity = int.tryParse(delivery.quantityController.text) ?? 0;
-      if (quantity <= 0) {
-        _showErrorToast("Please enter a valid quantity for all deliveries.");
-        return;
-      }
+      total += quantity * _pricePerLitre;
       delivery.price = quantity * _pricePerLitre;
-      total += delivery.price;
     }
     setState(() {
       _totalAmount = total;
     });
   }
 
-  void _handleSubmitOrder() {
+  void _handleSubmitOrder(bool isCreditAllowed) {
     final authState = context.read<AuthBloc>().state;
     if (authState is! Authenticated) {
       _showErrorToast("You must be logged in to place an order.");
@@ -137,38 +128,43 @@ class _CreateWaterOrderPageState extends State<CreateWaterOrderPage> {
     }
 
     final deliveryDtos = _deliveries.map((delivery) {
-      ScheduledDetailsRequestDto scheduledDetails;
       final now = DateTime.now();
       final dateFormat = DateFormat('yyyy-MM-dd');
       final timeFormat = DateFormat('HH:mm:ss');
 
+      ScheduledDetailsRequestDto scheduledDetails;
       if (delivery.isScheduled) {
         scheduledDetails = ScheduledDetailsRequestDto(
           scheduledDate: delivery.dateController.text,
           scheduledTime: delivery.timeController.text,
         );
       } else {
-        // For immediate delivery, use current date and time
         scheduledDetails = ScheduledDetailsRequestDto(
           scheduledDate: dateFormat.format(now),
           scheduledTime: timeFormat.format(now),
         );
       }
 
+      // FIX: Prioritize manually typed address for the main location field.
+      final String finalDropOffLocation =
+          delivery.manualAddressController.text.trim().isNotEmpty
+              ? delivery.manualAddressController.text.trim()
+              : delivery.pickedAddressDisplay;
+
       return WaterDeliveryRequestDto(
         priceAmount: delivery.price,
         dropOffLocation: DropOffLocationRequestDto(
           useMyContact: delivery.useMyDetails,
           addressId: null,
-          dropOffLatitude: delivery.latLng!.latitude,
-          dropOffLongitude: delivery.latLng!.longitude,
-          dropOffLocation: delivery.pickedAddressDisplay,
+          dropOffLatitude: delivery.latLng?.latitude ?? 0.0,
+          dropOffLongitude: delivery.latLng?.longitude ?? 0.0,
+          dropOffLocation: finalDropOffLocation,
           dropOffAddressTyped: delivery.manualAddressController.text.trim(),
           dropOffContactName: delivery.contactNameController.text.trim(),
           dropOffContactPhone: delivery.contactPhoneController.text.trim(),
         ),
         isScheduled: delivery.isScheduled,
-        quantity: int.parse(delivery.quantityController.text),
+        quantity: int.tryParse(delivery.quantityController.text) ?? 0,
         deliveryInstructions: delivery.instructionsController.text.trim(),
         scheduledDetails: scheduledDetails,
       );
@@ -176,7 +172,8 @@ class _CreateWaterOrderPageState extends State<CreateWaterOrderPage> {
 
     final orderDto = CreateWaterOrderRequestDto(
       clientId: authState.user.userId,
-      paymentType: _selectedPaymentMethod,
+      paymentType:
+          isCreditAllowed ? WaterPaymentType.CREDIT : _selectedPaymentMethod,
       promoCode: _promoCodeController.text.trim(),
       deliveries: deliveryDtos,
       paymentStatus: WaterPaymentStatus.PENDING,
@@ -186,13 +183,12 @@ class _CreateWaterOrderPageState extends State<CreateWaterOrderPage> {
     context.read<WaterOrderBloc>().add(CreateWaterOrder(orderDto));
   }
 
-  void onStepContinue() {
+  void onStepContinue(bool isCreditAllowed, int totalSteps) {
     if (_currentStep == 0) {
       bool allValid = true;
       for (var delivery in _deliveries) {
         if (delivery.manualAddressController.text.trim().isEmpty ||
             (int.tryParse(delivery.quantityController.text) ?? 0) <= 0 ||
-            delivery.latLng == null ||
             delivery.contactNameController.text.trim().isEmpty ||
             delivery.contactPhoneController.text.trim().isEmpty ||
             (delivery.isScheduled &&
@@ -203,18 +199,16 @@ class _CreateWaterOrderPageState extends State<CreateWaterOrderPage> {
         }
       }
       if (!allValid) {
-        _showErrorToast(
-            "For all deliveries, please fill all required fields: address, map pin, contact details, quantity, and scheduled date/time if applicable.");
+        _showErrorToast("Please fill all required fields for each delivery.");
         return;
       }
-    }
-    if (_currentStep == 1) {
       _calculatePrices();
     }
-    if (_currentStep < 2) {
+
+    if (_currentStep < totalSteps - 1) {
       setState(() => _currentStep += 1);
     } else {
-      _handleSubmitOrder();
+      _handleSubmitOrder(isCreditAllowed);
     }
   }
 
@@ -230,6 +224,10 @@ class _CreateWaterOrderPageState extends State<CreateWaterOrderPage> {
     final authState = context.watch<AuthBloc>().state;
     final User? currentUser =
         (authState is Authenticated) ? authState.user : null;
+    final bool isCreditAllowed = currentUser?.isCreditAllowed ?? false;
+
+    final steps = _buildSteps(isCreditAllowed, currentUser);
+    final isLastStep = _currentStep == steps.length - 1;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -256,7 +254,8 @@ class _CreateWaterOrderPageState extends State<CreateWaterOrderPage> {
 
           if (state is WaterOrderCreationSuccess) {
             _showSuccessToast("Order created successfully!");
-            context.go('/My_Orders');
+            context.pop();
+            context.pushNamed('My_Orders');
           }
           if (state is WaterOrderFailure) {
             _showErrorToast(state.failure.message);
@@ -272,19 +271,16 @@ class _CreateWaterOrderPageState extends State<CreateWaterOrderPage> {
             elevation: 0,
             type: StepperType.vertical,
             currentStep: _currentStep,
-            onStepContinue: onStepContinue,
+            onStepContinue: () => onStepContinue(isCreditAllowed, steps.length),
             onStepCancel: onStepCancel,
             controlsBuilder: (context, details) {
-              final isLastStep = _currentStep == 2;
               return Padding(
                 padding: const EdgeInsets.only(top: 24.0),
                 child: Row(
                   children: [
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: isLastStep
-                            ? _handleSubmitOrder
-                            : details.onStepContinue,
+                        onPressed: details.onStepContinue,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: theme.primary,
                           foregroundColor: Colors.white,
@@ -302,10 +298,7 @@ class _CreateWaterOrderPageState extends State<CreateWaterOrderPage> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : Text(
-                                isLastStep
-                                    ? 'Confirm & Place Order'
-                                    : 'Continue',
+                            : Text(isLastStep ? 'Confirm Order' : 'Continue',
                                 style: const TextStyle(
                                     fontSize: 14, fontWeight: FontWeight.bold)),
                       ),
@@ -328,78 +321,87 @@ class _CreateWaterOrderPageState extends State<CreateWaterOrderPage> {
                 ),
               );
             },
-            steps: [
-              Step(
-                title: const Text('Delivery Locations',
-                    style: TextStyle(fontSize: 16)),
-                content: Column(
-                  children: [
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _deliveries.length,
-                      itemBuilder: (context, index) {
-                        return DeliveryCard(
-                          key: ValueKey(_deliveries[index].id),
-                          delivery: _deliveries[index],
-                          index: index,
-                          showRemoveButton: _deliveries.length > 1,
-                          onRemove: () => _removeDelivery(index),
-                          onLocationUpdate: (latLng, address) {
-                            setState(() {
-                              _deliveries[index].latLng = latLng;
-                              _deliveries[index].pickedAddressDisplay = address;
-                            });
-                          },
-                          currentUser: currentUser,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    TextButton.icon(
-                      onPressed: _addDelivery,
-                      icon:
-                          Icon(Icons.add_circle_outline, color: theme.primary),
-                      label: Text('Add Another Delivery',
-                          style: TextStyle(color: theme.primary)),
-                    ),
-                  ],
-                ),
-                isActive: _currentStep >= 0,
-                state:
-                    _currentStep > 0 ? StepState.complete : StepState.indexed,
-              ),
-              Step(
-                title: const Text('Payment', style: TextStyle(fontSize: 16)),
-                content: PaymentSection(
-                  selectedPaymentMethod: _selectedPaymentMethod,
-                  promoCodeController: _promoCodeController,
-                  onPaymentChanged: (val) {
-                    if (val != null) {
-                      setState(() => _selectedPaymentMethod = val);
-                    }
-                  },
-                ),
-                isActive: _currentStep >= 1,
-                state:
-                    _currentStep > 1 ? StepState.complete : StepState.indexed,
-              ),
-              Step(
-                title:
-                    const Text('Order Summary', style: TextStyle(fontSize: 16)),
-                content: SummarySection(
-                  deliveries: _deliveries,
-                  totalAmount: _totalAmount,
-                ),
-                isActive: _currentStep >= 2,
-                state:
-                    _currentStep > 2 ? StepState.complete : StepState.indexed,
-              ),
-            ],
+            steps: steps,
           ),
         ),
       ),
     );
+  }
+
+  List<Step> _buildSteps(bool isCreditAllowed, User? currentUser) {
+    final steps = <Step>[
+      Step(
+        title: const Text('Delivery Locations', style: TextStyle(fontSize: 16)),
+        content: Column(
+          children: [
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _deliveries.length,
+              itemBuilder: (context, index) {
+                return DeliveryCard(
+                  key: ValueKey(_deliveries[index].id),
+                  delivery: _deliveries[index],
+                  index: index,
+                  showRemoveButton: _deliveries.length > 1,
+                  onRemove: () => _removeDelivery(index),
+                  onLocationUpdate: (latLng, address) {
+                    setState(() {
+                      _deliveries[index].latLng = latLng;
+                      _deliveries[index].pickedAddressDisplay = address;
+                    });
+                  },
+                  currentUser: currentUser,
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: _addDelivery,
+              icon: Icon(Icons.add_circle_outline,
+                  color: FlutterFlowTheme.of(context).primary),
+              label: Text('Add Another Delivery',
+                  style:
+                      TextStyle(color: FlutterFlowTheme.of(context).primary)),
+            ),
+          ],
+        ),
+        isActive: _currentStep >= 0,
+        state: _currentStep > 0 ? StepState.complete : StepState.indexed,
+      ),
+    ];
+
+    if (!isCreditAllowed) {
+      steps.add(
+        Step(
+          title: const Text('Payment', style: TextStyle(fontSize: 16)),
+          content: PaymentSection(
+            selectedPaymentMethod: _selectedPaymentMethod,
+            promoCodeController: _promoCodeController,
+            onPaymentChanged: (val) {
+              if (val != null) {
+                setState(() => _selectedPaymentMethod = val);
+              }
+            },
+          ),
+          isActive: _currentStep >= 1,
+          state: _currentStep > 1 ? StepState.complete : StepState.indexed,
+        ),
+      );
+    }
+
+    steps.add(
+      Step(
+        title: const Text('Order Summary', style: TextStyle(fontSize: 16)),
+        content: SummarySection(
+          deliveries: _deliveries,
+          totalAmount: _totalAmount,
+        ),
+        isActive: _currentStep >= (isCreditAllowed ? 1 : 2),
+      ),
+    );
+
+    return steps;
   }
 
   void _showSuccessToast(String message) {

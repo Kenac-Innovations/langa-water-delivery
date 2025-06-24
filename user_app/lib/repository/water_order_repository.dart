@@ -14,9 +14,6 @@ class WaterOrderRepository {
 
   Future<Either<Failure, WaterOrder>> createWaterOrder(
       CreateWaterOrderRequestDto dto) async {
-    print('------------------------------------');
-    print(dto.toJson());
-    print('------------------------------------');
     try {
       final response = await _dioClient.dio
           .post(ApiConstants.createWaterOrder, data: dto.toJson());

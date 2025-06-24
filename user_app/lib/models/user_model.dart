@@ -6,7 +6,7 @@ class User extends Equatable {
   final String phoneNumber;
   final String firstName;
   final String lastName;
-  final num walletBalance;
+  final bool isCreditAllowed;
 
   const User({
     required this.userId,
@@ -14,12 +14,12 @@ class User extends Equatable {
     required this.phoneNumber,
     required this.firstName,
     required this.lastName,
-    required this.walletBalance,
+    required this.isCreditAllowed,
   });
 
   @override
   List<Object?> get props =>
-      [userId, email, phoneNumber, firstName, lastName, walletBalance];
+      [userId, email, phoneNumber, firstName, lastName, isCreditAllowed];
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
@@ -28,7 +28,7 @@ class User extends Equatable {
       phoneNumber: json['phoneNumber'] as String? ?? '',
       firstName: json['firstName'] as String? ?? '',
       lastName: json['lastName'] as String? ?? '',
-      walletBalance: json['walletBalance'] as num? ?? 0,
+      isCreditAllowed: json['isCreditedAllowed'] as bool? ?? false,
     );
   }
 }

@@ -207,7 +207,7 @@ class WaterDeliveryResponseDto {
       dropOffLocation:
           DropOffLocationResponseDto.fromJson(json['dropOffLocation']),
       isScheduled: json['isScheduled'],
-      quantity: json['quantity'],
+      quantity: json['quantity'] ?? 0,
       deliveryInstructions: json['deliveryInstructions'],
       scheduledDetails: json['scheduledDetails'] != null
           ? ScheduledDetailsResponseDto.fromJson(json['scheduledDetails'])
