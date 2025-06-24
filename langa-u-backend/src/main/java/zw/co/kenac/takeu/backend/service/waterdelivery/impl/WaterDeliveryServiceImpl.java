@@ -102,6 +102,7 @@ public class WaterDeliveryServiceImpl implements WaterDeliveryService {
                 .priceAmount(delivery.getPriceAmount())
                 .autoAssignDriver(delivery.getAutoAssignDriver())
                 .dropOffLocation(delivery.getDropOffLocation())
+                .waterLitreQuantity(delivery.getWaterLitreQuantity())
                 .isScheduled(delivery.getIsScheduled())
                 .deliveryInstructions(delivery.getDeliveryInstructions())
                 .scheduledDetails(delivery.getScheduledDetails())

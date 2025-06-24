@@ -17,6 +17,7 @@ public class WaterDeliveryResponse {
     private Long deliveryId;
     private BigDecimal priceAmount;
     private Boolean autoAssignDriver;
+    private Integer waterLitreQuantity;
     private DropOffLocation dropOffLocation;
     private Boolean isScheduled;
     private String deliveryInstructions;
