@@ -241,6 +241,7 @@ public class WaterOrderServiceImpl implements WaterOrderService {
                 .deliveryId(delivery.getEntityId())
                 .priceAmount(delivery.getPriceAmount())
                 .autoAssignDriver(delivery.getAutoAssignDriver())
+                .quantity(delivery.getWaterLitreQuantity())
                 .dropOffLocation(delivery.getDropOffLocation())
                 .isScheduled(delivery.getIsScheduled())
                 .deliveryInstructions(delivery.getDeliveryInstructions())
