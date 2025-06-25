@@ -14,6 +14,7 @@ import lombok.*;
 @NoArgsConstructor
 @Builder
 public class ClientAddressRequestDto {
+    private String title;
     private String addressEntered;
     private double latitude;
     private double longitude;
