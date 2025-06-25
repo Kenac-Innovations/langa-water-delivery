@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart'
     show LatLng;
+import 'package:langas_user/models/water_order_model.dart';
 import 'package:langas_user/pages/address/address_page.dart';
 
 import 'package:langas_user/pages/change_password/change_password_widget.dart';
@@ -98,9 +99,12 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           builder: (context, state) => const MyOrdersPage(),
         ),
         GoRoute(
-          name: 'Create_Delivery',
-          path: '/createDelivery',
-          builder: (context, state) => const CreateWaterOrderPage(),
+          name: 'Create_Water_Order',
+          path: '/createWaterOrder',
+          builder: (context, state) {
+            final repeatOrder = state.extra as WaterOrder?;
+            return CreateWaterOrderPage(repeatOrder: repeatOrder);
+          },
         ),
         GoRoute(
           name: 'Notification',

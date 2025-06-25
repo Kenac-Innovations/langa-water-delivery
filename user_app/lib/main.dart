@@ -13,9 +13,11 @@ import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_state.dart';
 import 'package:langas_user/bloc/auth/login_bloc/login_bloc_bloc.dart';
 import 'package:langas_user/bloc/auth/password_reset_bloc/password_reset_bloc_bloc.dart';
 import 'package:langas_user/bloc/auth/register_bloc/register_bloc_bloc.dart';
-import 'package:langas_user/bloc/bloc/water_order_bloc_bloc.dart';
+import 'package:langas_user/bloc/payment_card/payment_card_bloc_bloc.dart';
+import 'package:langas_user/bloc/water_oder/water_order_bloc_bloc.dart';
 import 'package:langas_user/bloc/promotions/promotions_bloc_bloc.dart';
 import 'package:langas_user/repository/auth_repository.dart';
+import 'package:langas_user/repository/payment_card_repository.dart';
 import 'package:langas_user/repository/promotions_repository.dart';
 import 'package:langas_user/repository/water_order_repository.dart';
 
@@ -58,6 +60,7 @@ void main() async {
     dioClient: dioClient,
   );
   final waterOrderRepository = WaterOrderRepository(dioClient: dioClient);
+  final paymentCardRepository = PaymentCardRepository(dioClient: dioClient);
 
   final fcmService = FCMService(
     firebaseMessaging: FirebaseMessaging.instance,
@@ -79,6 +82,7 @@ void main() async {
         RepositoryProvider.value(value: firebaseDriverService),
         RepositoryProvider.value(value: promotionsRepository),
         RepositoryProvider.value(value: waterOrderRepository),
+        RepositoryProvider.value(value: paymentCardRepository),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -112,6 +116,11 @@ void main() async {
           BlocProvider<WaterOrderBloc>(
             create: (context) => WaterOrderBloc(
               waterOrderRepository: context.read<WaterOrderRepository>(),
+            ),
+          ),
+          BlocProvider<PaymentCardBloc>(
+            create: (context) => PaymentCardBloc(
+              paymentCardRepository: context.read<PaymentCardRepository>(),
             ),
           ),
         ],

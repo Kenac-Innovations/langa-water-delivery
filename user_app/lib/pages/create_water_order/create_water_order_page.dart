@@ -5,12 +5,13 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_bloc.dart';
 import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_state.dart';
-import 'package:langas_user/bloc/bloc/water_order_bloc_bloc.dart';
-import 'package:langas_user/bloc/bloc/water_order_bloc_event.dart';
-import 'package:langas_user/bloc/bloc/water_order_bloc_state.dart';
+import 'package:langas_user/bloc/water_oder/water_order_bloc_bloc.dart';
+import 'package:langas_user/bloc/water_oder/water_order_bloc_event.dart';
+import 'package:langas_user/bloc/water_oder/water_order_bloc_state.dart';
 import 'package:langas_user/dto/water_order_dto.dart';
 import 'package:langas_user/flutter_flow/flutter_flow_theme.dart';
 import 'package:langas_user/models/user_model.dart';
+import 'package:langas_user/models/water_order_model.dart';
 import 'package:langas_user/pages/create_water_order/delivery_card.dart';
 import 'package:langas_user/pages/create_water_order/payment_section.dart';
 import 'package:langas_user/pages/create_water_order/summary_section.dart';
@@ -54,10 +55,12 @@ class DeliveryModel {
 
 class CreateWaterOrderPage extends StatefulWidget {
   final User? currentUser;
+  final WaterOrder? repeatOrder;
 
   const CreateWaterOrderPage({
     super.key,
     this.currentUser,
+    this.repeatOrder,
   });
 
   @override
@@ -79,7 +82,40 @@ class _CreateWaterOrderPageState extends State<CreateWaterOrderPage> {
   void initState() {
     super.initState();
     _geolocationService = GeolocationService();
-    _addDelivery();
+
+    if (widget.repeatOrder != null) {
+      _prepopulateFromRepeatOrder();
+    } else {
+      _addDelivery();
+    }
+  }
+
+  void _prepopulateFromRepeatOrder() {
+    for (var delivery in widget.repeatOrder!.deliveries) {
+      final newDeliveryModel = DeliveryModel(
+        latLng: LatLng(delivery.dropOffLocation.dropOffLatitude,
+            delivery.dropOffLocation.dropOffLongitude),
+        isScheduled: delivery.isScheduled ?? false,
+        pickedAddressDisplay: delivery.dropOffLocation.dropOffLocation,
+      );
+      newDeliveryModel.manualAddressController.text =
+          delivery.dropOffLocation.dropOffAddressType ?? '';
+      newDeliveryModel.quantityController.text = delivery.quantity.toString();
+      newDeliveryModel.instructionsController.text =
+          delivery.deliveryInstructions ?? '';
+      newDeliveryModel.contactNameController.text =
+          delivery.dropOffLocation.dropOffContactName;
+      newDeliveryModel.contactPhoneController.text =
+          delivery.dropOffLocation.dropOffContactPhone;
+      if (delivery.isScheduled == true && delivery.scheduledDetails != null) {
+        newDeliveryModel.dateController.text =
+            delivery.scheduledDetails!.scheduledDate;
+        newDeliveryModel.timeController.text =
+            delivery.scheduledDetails!.scheduledTime ?? '';
+      }
+      _deliveries.add(newDeliveryModel);
+    }
+    setState(() {});
   }
 
   void _addDelivery() async {
@@ -145,7 +181,6 @@ class _CreateWaterOrderPageState extends State<CreateWaterOrderPage> {
         );
       }
 
-      // FIX: Prioritize manually typed address for the main location field.
       final String finalDropOffLocation =
           delivery.manualAddressController.text.trim().isNotEmpty
               ? delivery.manualAddressController.text.trim()
@@ -254,8 +289,7 @@ class _CreateWaterOrderPageState extends State<CreateWaterOrderPage> {
 
           if (state is WaterOrderCreationSuccess) {
             _showSuccessToast("Order created successfully!");
-            context.pop();
-            context.pushNamed('My_Orders');
+            context.go('/My_Orders');
           }
           if (state is WaterOrderFailure) {
             _showErrorToast(state.failure.message);

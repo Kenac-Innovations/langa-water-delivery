@@ -46,4 +46,27 @@ class ApiConstants {
       '/api/v2/water-deliveries/getbyId/$orderId';
   static String allWaterDeliveriesByClientId(int clientId) =>
       '/api/v2/water-deliveries/client/$clientId';
+
+  // Payment Card Endpoints
+  static const String createPaymentCard = '/api/v2/payment-cards/create';
+  static const String setDefaultPaymentCard =
+      '/api/v2/payment-cards/set-default';
+  static String updatePaymentCard(int cardId) =>
+      '/api/v2/payment-cards/update/$cardId';
+  static String getClientPaymentCards(int clientId) =>
+      '/api/v2/payment-cards/client/$clientId';
+  static String deletePaymentCard(int cardId) =>
+      '/api/v2/payment-cards/delete/$cardId';
+
+  // Client Address Endpoints
+  static const String createClientAddress =
+      '/api/v2/client-profile/address/create';
+  static String getClientAddresses(int clientId) =>
+      '/api/v2/client-profile/address/getbyclient/$clientId';
+  static const String setDefaultAddress =
+      '/api/v2/client-profile/address/set-default';
+  static String updateClientAddress(int addressId) =>
+      '/api/v2/client-profile/address/update/$addressId';
+  static String deleteClientAddress(int addressId) =>
+      '/api/v2/client-profile/address/delete/$addressId';
 }

@@ -5,6 +5,9 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_bloc.dart';
 import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_state.dart';
+import 'package:langas_user/bloc/water_oder/water_order_bloc_bloc.dart';
+import 'package:langas_user/bloc/water_oder/water_order_bloc_event.dart';
+import 'package:langas_user/bloc/water_oder/water_order_bloc_state.dart';
 import 'package:langas_user/bloc/promotions/promotions_bloc_bloc.dart';
 import 'package:langas_user/bloc/promotions/promotions_bloc_event.dart';
 import 'package:langas_user/bloc/promotions/promotions_bloc_state.dart';
@@ -12,8 +15,10 @@ import 'package:langas_user/flutter_flow/flutter_flow_icon_button.dart';
 import 'package:langas_user/flutter_flow/flutter_flow_theme.dart';
 import 'package:langas_user/models/promotion_model.dart';
 import 'package:langas_user/models/user_model.dart';
+import 'package:langas_user/models/water_order_model.dart';
 import 'package:langas_user/pages/drawer/drawer_widget.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:shimmer/shimmer.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -30,6 +35,11 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     context.read<PromotionsBloc>().add(FetchAllPromotions());
+    final authState = context.read<AuthBloc>().state;
+    if (authState is Authenticated) {
+      context.read<WaterOrderBloc>().add(FetchClientRecentDeliveries(
+          clientId: authState.user.userId, pageSize: 1));
+    }
   }
 
   AppBar _buildAppBar(BuildContext context, User? user) {
@@ -118,7 +128,7 @@ class _HomePageState extends State<HomePage> {
               FloatingActionButtonLocation.centerFloat,
           floatingActionButton: _isFabExtended
               ? FloatingActionButton.extended(
-                  onPressed: () => context.pushNamed('Create_Delivery'),
+                  onPressed: () => context.pushNamed('Create_Water_Order'),
                   backgroundColor: FlutterFlowTheme.of(context).primary,
                   foregroundColor: Colors.white,
                   elevation: 8,
@@ -129,7 +139,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 )
               : FloatingActionButton(
-                  onPressed: () => context.pushNamed('Create_Delivery'),
+                  onPressed: () => context.pushNamed('Create_Water_Order'),
                   backgroundColor: FlutterFlowTheme.of(context).primary,
                   foregroundColor: Colors.white,
                   elevation: 8,
@@ -226,7 +236,6 @@ class _HomePageState extends State<HomePage> {
         ),
         child: Container(
           decoration: BoxDecoration(
-            // Add a dark overlay for better text visibility
             color: Colors.black.withOpacity(0.25),
             borderRadius: BorderRadius.circular(16),
           ),
@@ -320,7 +329,7 @@ class _HomePageState extends State<HomePage> {
                 context,
                 icon: Icons.calendar_today,
                 title: 'Valid Until',
-                value: DateFormat('MMMM d, yyyy')
+                value: DateFormat('MMMM d,<x_bin_342>')
                     .format(DateTime.parse(promotion.endDate)),
               ),
               _buildDetailRow(
@@ -427,70 +436,179 @@ class _HomePageState extends State<HomePage> {
         children: [
           _buildSectionHeader('Quick Actions'),
           const SizedBox(height: 12),
-          Card(
-            elevation: 2,
-            shadowColor: Colors.black.withOpacity(0.1),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
+          BlocBuilder<WaterOrderBloc, WaterOrderState>(
+            builder: (context, state) {
+              if (state is WaterOrderLoading) {
+                return _buildQuickActionsLoading();
+              }
+              if (state is WaterOrderListLoadSuccess) {
+                if (state.paginatedResponse.content.isEmpty) {
+                  return _buildNoOrdersCard();
+                }
+                final lastOrder = state.paginatedResponse.content.first;
+                return _buildRepeatOrderCard(lastOrder);
+              }
+              if (state is WaterOrderFailure) {
+                return _buildErrorCard(state.failure.message);
+              }
+              return _buildNoOrdersCard();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActionsLoading() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: Card(
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.1),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Container(
+          height: 150,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoOrdersCard() {
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(0.1),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('5L Mineral Water',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 16)),
-                        const SizedBox(height: 4),
-                        const Text('789 Hydration Ave',
-                            style: TextStyle(color: Colors.black54)),
-                        const SizedBox(height: 8),
-                        const Text('\$12',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 16)),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          height: 36,
-                          child: ElevatedButton(
-                            onPressed: () {},
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  FlutterFlowTheme.of(context).primary,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                            ),
-                            child: const Text('Repeat Order'),
-                          ),
-                        ),
-                      ],
+                  const Text('No recent orders',
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(height: 4),
+                  const Text('Place your first water delivery order today!',
+                      style: TextStyle(color: Colors.black54)),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height: 36,
+                    child: ElevatedButton(
+                      onPressed: () => context.pushNamed('Create_Water_Order'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: FlutterFlowTheme.of(context).primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                      ),
+                      child: const Text('Create New Order'),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.asset(
-                      'assets/images/water.jpg',
-                      width: 100,
-                      height: 100,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          width: 100,
-                          height: 100,
-                          color: Colors.grey.shade200,
-                          child: Icon(Icons.image_not_supported_outlined,
-                              color: Colors.grey.shade400),
-                        );
-                      },
-                    ),
-                  )
                 ],
               ),
             ),
+            const SizedBox(width: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset(
+                'assets/images/water.jpg',
+                width: 100,
+                height: 100,
+                fit: BoxFit.cover,
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRepeatOrderCard(WaterOrder lastOrder) {
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(0.1),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Last Order',
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Order #${lastOrder.orderId} - ${lastOrder.deliveries.length} deliveries',
+                    style: const TextStyle(color: Colors.black54),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Text('\$${lastOrder.totalAmount.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height: 36,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        context.pushNamed('Create_Water_Order',
+                            extra: lastOrder);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: FlutterFlowTheme.of(context).primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                      ),
+                      child: const Text('Repeat Order'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset(
+                'assets/images/water.jpg',
+                width: 100,
+                height: 100,
+                fit: BoxFit.cover,
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorCard(String message) {
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(0.1),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Center(
+          child: Column(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red, size: 40),
+              const SizedBox(height: 8),
+              const Text('Could not load recent order'),
+              Text(message, style: const TextStyle(color: Colors.grey)),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

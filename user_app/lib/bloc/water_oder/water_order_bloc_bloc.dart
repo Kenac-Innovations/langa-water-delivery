@@ -1,6 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:langas_user/bloc/bloc/water_order_bloc_event.dart';
-import 'package:langas_user/bloc/bloc/water_order_bloc_state.dart';
+import 'package:langas_user/bloc/water_oder/water_order_bloc_event.dart';
+import 'package:langas_user/bloc/water_oder/water_order_bloc_state.dart';
 import 'package:langas_user/repository/water_order_repository.dart';
 
 class WaterOrderBloc extends Bloc<WaterOrderEvent, WaterOrderState> {

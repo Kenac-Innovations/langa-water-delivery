@@ -1,26 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
+import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_bloc.dart';
+import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_state.dart';
+import 'package:langas_user/bloc/payment_card/payment_card_bloc_bloc.dart';
+import 'package:langas_user/bloc/payment_card/payment_card_bloc_event.dart';
+import 'package:langas_user/bloc/payment_card/payment_card_bloc_state.dart';
 import 'package:langas_user/flutter_flow/flutter_flow_theme.dart';
+import 'package:langas_user/models/payment_card_model.dart';
 import 'package:langas_user/pages/payments/add_payment_card_page.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-
-class CardInfo {
-  final int id;
-  final String cardHolderName;
-  final String cardNumber;
-  final String expiryDate;
-  final String cardType;
-  bool isPreferred;
-
-  CardInfo({
-    required this.id,
-    required this.cardHolderName,
-    required this.cardNumber,
-    required this.expiryDate,
-    required this.cardType,
-    this.isPreferred = false,
-  });
-}
 
 class PaymentMethodPage extends StatefulWidget {
   const PaymentMethodPage({super.key});
@@ -30,137 +20,204 @@ class PaymentMethodPage extends StatefulWidget {
 }
 
 class _PaymentMethodPageState extends State<PaymentMethodPage> {
-  final List<CardInfo> _savedCards = [
-    CardInfo(
-        id: 1,
-        cardHolderName: 'John Doe',
-        cardNumber: '**** **** **** 1234',
-        expiryDate: '12/26',
-        cardType: 'VISA',
-        isPreferred: true),
-    CardInfo(
-        id: 2,
-        cardHolderName: 'John Doe',
-        cardNumber: '**** **** **** 5678',
-        expiryDate: '08/25',
-        cardType: 'MASTERCARD'),
-    CardInfo(
-        id: 3,
-        cardHolderName: 'John Doe',
-        cardNumber: '**** **** **** 9876',
-        expiryDate: '01/28',
-        cardType: 'ZIMSWITCH'),
-  ];
+  int? get _clientId {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is Authenticated) {
+      return authState.user.userId;
+    }
+    return null;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (_clientId != null) {
+      context.read<PaymentCardBloc>().add(FetchClientCards(_clientId!));
+    }
+  }
 
   void _setAsPreferred(int cardId) {
-    setState(() {
-      for (var card in _savedCards) {
-        card.isPreferred = card.id == cardId;
-      }
-    });
-    Fluttertoast.showToast(msg: "Preferred card updated.");
+    if (_clientId != null) {
+      context
+          .read<PaymentCardBloc>()
+          .add(SetDefaultPaymentCard(_clientId!, cardId));
+    }
   }
 
   void _deleteCard(int cardId) {
-    setState(() {
-      _savedCards.removeWhere((card) => card.id == cardId);
-    });
-    Fluttertoast.showToast(
-        msg: "Card removed successfully.", backgroundColor: Colors.green);
+    context.read<PaymentCardBloc>().add(DeletePaymentCard(cardId));
+  }
+
+  void _refreshCards() {
+    if (_clientId != null) {
+      context.read<PaymentCardBloc>().add(FetchClientCards(_clientId!));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = FlutterFlowTheme.of(context);
-    final preferredCard = _savedCards.firstWhere((card) => card.isPreferred,
-        orElse: () => _savedCards.first);
-    final otherCards = _savedCards.where((card) => !card.isPreferred).toList();
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Payment Methods'),
+        title: const Text('Payment Cards'),
         backgroundColor: theme.primary,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(onPressed: _refreshCards, icon: const Icon(Icons.refresh))
+        ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Primary Card',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            CreditCardWidget(
-              cardInfo: preferredCard,
-              onSetAsPreferred: () => _setAsPreferred(preferredCard.id),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Other Cards',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+      body: BlocConsumer<PaymentCardBloc, PaymentCardState>(
+        listener: (context, state) {
+          if (state is PaymentCardOperationSuccess) {
+            Fluttertoast.showToast(msg: state.message);
+            _refreshCards();
+          }
+          if (state is PaymentCardFailure) {
+            Fluttertoast.showToast(
+                msg: state.failure.message, backgroundColor: Colors.red);
+          }
+        },
+        builder: (context, state) {
+          if (state is PaymentCardLoading && state is! PaymentCardLoadSuccess) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (state is PaymentCardLoadSuccess) {
+            if (state.cards.isEmpty) {
+              return _buildEmptyState(context);
+            }
+            final preferredCard = state.cards.firstWhere((c) => c.isDefault,
+                orElse: () => state.cards.first);
+            final otherCards = state.cards.where((c) => !c.isDefault).toList();
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Primary Card',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  CreditCardWidget(
+                    cardInfo: preferredCard,
+                    onSetAsPreferred: () => _setAsPreferred(preferredCard.id),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Other Cards',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          )),
+                      TextButton.icon(
+                        icon: Icon(Icons.add,
+                            color: FlutterFlowTheme.of(context).primary),
+                        label: Text(
+                          'Add New',
+                          style: TextStyle(
+                              color: FlutterFlowTheme.of(context).primary),
+                        ),
+                        onPressed: () async {
+                          final result = await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                      const AddPaymentCardPage()));
+                          if (result == true) {
+                            _refreshCards();
+                          }
+                        },
+                      )
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (otherCards.isEmpty)
+                    const Center(
+                        child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text("No other cards added yet."),
                     )),
-                TextButton.icon(
-                  icon: Icon(Icons.add,
-                      color: FlutterFlowTheme.of(context).primary),
-                  label: Text(
-                    'Add New',
-                    style:
-                        TextStyle(color: FlutterFlowTheme.of(context).primary),
+                  ListView.builder(
+                    itemCount: otherCards.length,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemBuilder: (context, index) {
+                      final card = otherCards[index];
+                      return Dismissible(
+                        key: ValueKey(card.id),
+                        direction: DismissDirection.endToStart,
+                        onDismissed: (_) => _deleteCard(card.id),
+                        background: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          decoration: BoxDecoration(
+                            color: theme.error,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Icon(Icons.delete, color: Colors.white),
+                              SizedBox(width: 8),
+                              Text('Delete',
+                                  style: TextStyle(color: Colors.white)),
+                            ],
+                          ),
+                        ),
+                        child: CreditCardWidget(
+                          cardInfo: card,
+                          onSetAsPreferred: () => _setAsPreferred(card.id),
+                        ),
+                      );
+                    },
                   ),
-                  onPressed: () {
-                    Navigator.of(context).push(MaterialPageRoute(
-                        builder: (context) => const AddPaymentCardPage()));
-                  },
-                )
-              ],
+                ],
+              ),
+            );
+          }
+          return _buildEmptyState(context);
+        },
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.credit_card_off, size: 80, color: Colors.grey),
+          const SizedBox(height: 16),
+          const Text("No Payment Cards Found",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          const Text("Add a card to get started with payments."),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.add),
+            label: const Text('Add New Card'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: FlutterFlowTheme.of(context).primary,
+              foregroundColor: Colors.white,
             ),
-            const SizedBox(height: 8),
-            ListView.builder(
-              itemCount: otherCards.length,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemBuilder: (context, index) {
-                final card = otherCards[index];
-                return Dismissible(
-                  key: ValueKey(card.id),
-                  direction: DismissDirection.endToStart,
-                  onDismissed: (_) => _deleteCard(card.id),
-                  background: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    decoration: BoxDecoration(
-                      color: theme.error,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Icon(Icons.delete, color: Colors.white),
-                        SizedBox(width: 8),
-                        Text('Delete', style: TextStyle(color: Colors.white)),
-                      ],
-                    ),
-                  ),
-                  child: CreditCardWidget(
-                    cardInfo: card,
-                    onSetAsPreferred: () => _setAsPreferred(card.id),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
+            onPressed: () async {
+              final result = await Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => const AddPaymentCardPage()));
+              if (result == true) {
+                _refreshCards();
+              }
+            },
+          )
+        ],
       ),
     );
   }
 }
 
 class CreditCardWidget extends StatelessWidget {
-  final CardInfo cardInfo;
+  final PaymentCard cardInfo;
   final VoidCallback onSetAsPreferred;
 
   const CreditCardWidget(
@@ -178,7 +235,8 @@ class CreditCardWidget extends StatelessWidget {
         logoPath = 'assets/images/zimswitch_logo.png';
         return Image.asset(logoPath, height: 30);
       default:
-        return const SizedBox(height: 30);
+        return Text(cardType,
+            style: const TextStyle(fontWeight: FontWeight.bold));
     }
   }
 
@@ -199,7 +257,7 @@ class CreditCardWidget extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                if (cardInfo.isPreferred)
+                if (cardInfo.isDefault)
                   const Chip(
                       label: Text('Primary'), backgroundColor: Colors.white)
                 else
@@ -209,7 +267,7 @@ class CreditCardWidget extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              cardInfo.cardNumber,
+              cardInfo.maskedCardNumber,
               style: TextStyle(
                   color: theme.primaryText, fontSize: 20, letterSpacing: 2),
             ),
@@ -244,7 +302,7 @@ class CreditCardWidget extends StatelessWidget {
                 ),
               ],
             ),
-            if (!cardInfo.isPreferred) ...[
+            if (!cardInfo.isDefault) ...[
               const Divider(height: 24),
               Align(
                 alignment: Alignment.centerRight,
