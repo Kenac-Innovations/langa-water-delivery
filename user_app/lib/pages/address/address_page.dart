@@ -1,20 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_bloc.dart';
+import 'package:langas_user/bloc/auth/auth_bloc/auth_bloc_state.dart';
+import 'package:langas_user/bloc/client_address/client_address_bloc.dart';
+import 'package:langas_user/bloc/client_address/client_address_event.dart';
+import 'package:langas_user/bloc/client_address/client_address_state.dart';
 import 'package:langas_user/flutter_flow/flutter_flow_theme.dart';
+import 'package:langas_user/models/client_address_model.dart';
 import 'package:langas_user/pages/address/add_address_page.dart';
-
-class AddressModel {
-  final int id;
-  final String nickname;
-  final String fullAddress;
-  bool isPreferred;
-
-  AddressModel({
-    required this.id,
-    required this.nickname,
-    required this.fullAddress,
-    this.isPreferred = false,
-  });
-}
+import 'package:fluttertoast/fluttertoast.dart';
 
 class AddressPage extends StatefulWidget {
   const AddressPage({super.key});
@@ -24,35 +18,38 @@ class AddressPage extends StatefulWidget {
 }
 
 class _AddressPageState extends State<AddressPage> {
-  final List<AddressModel> _addresses = [
-    AddressModel(
-        id: 1,
-        nickname: 'Home',
-        fullAddress: 'Apt 4B, Springfield, IL 62704',
-        isPreferred: true),
-    AddressModel(
-        id: 2, nickname: 'Work', fullAddress: 'Unit 2C, Springfield, IL 62704'),
-    AddressModel(
-        id: 3,
-        nickname: 'Vacation Home',
-        fullAddress: 'Unit 2C, Springfield, IL 62704'),
-  ];
+  int? get _clientId {
+    final authState = context.read<AuthBloc>().state;
+    return (authState is Authenticated) ? authState.user.userId : null;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshAddresses();
+  }
+
+  void _refreshAddresses() {
+    if (_clientId != null) {
+      context.read<ClientAddressBloc>().add(FetchClientAddresses(_clientId!));
+    }
+  }
 
   void _setAsPreferred(int addressId) {
-    setState(() {
-      for (var address in _addresses) {
-        address.isPreferred = address.id == addressId;
-      }
-    });
+    if (_clientId != null) {
+      context
+          .read<ClientAddressBloc>()
+          .add(SetDefaultClientAddress(_clientId!, addressId));
+    }
+  }
+
+  void _deleteAddress(int addressId) {
+    context.read<ClientAddressBloc>().add(DeleteClientAddress(addressId));
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = FlutterFlowTheme.of(context);
-    final preferredAddress = _addresses.firstWhere((addr) => addr.isPreferred,
-        orElse: () => _addresses.first);
-    final otherAddresses =
-        _addresses.where((addr) => !addr.isPreferred).toList();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -62,41 +59,102 @@ class _AddressPageState extends State<AddressPage> {
         foregroundColor: Colors.white,
         title: const Text('My Addresses',
             style: TextStyle(fontFamily: 'Poppins', color: Colors.white)),
+        actions: [
+          IconButton(
+              onPressed: _refreshAddresses, icon: const Icon(Icons.refresh))
+        ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Preferred',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            _buildAddressListItem(preferredAddress, true, theme),
-            const SizedBox(height: 24),
-            const Text(
-              'Others',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            ListView.separated(
-              itemCount: otherAddresses.length,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                return _buildAddressListItem(
-                    otherAddresses[index], false, theme);
-              },
-            ),
-          ],
-        ),
+      body: BlocConsumer<ClientAddressBloc, ClientAddressState>(
+        listener: (context, state) {
+          if (state is ClientAddressOperationSuccess) {
+            Fluttertoast.showToast(
+                msg: state.message, backgroundColor: Colors.green);
+            _refreshAddresses();
+          }
+          if (state is ClientAddressFailure) {
+            Fluttertoast.showToast(
+                msg: state.failure.message, backgroundColor: Colors.red);
+          }
+        },
+        builder: (context, state) {
+          if (state is ClientAddressLoading &&
+              state is! ClientAddressLoadSuccess) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (state is ClientAddressLoadSuccess) {
+            if (state.addresses.isEmpty) {
+              return _buildEmptyState(context);
+            }
+            final preferredAddress = state.addresses.firstWhere(
+                (a) => a.isDefault,
+                orElse: () => state.addresses.first);
+            final otherAddresses =
+                state.addresses.where((a) => !a.isDefault).toList();
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Preferred',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  _buildAddressListItem(preferredAddress, true, theme),
+                  const SizedBox(height: 24),
+                  const Text('Others',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  if (otherAddresses.isEmpty)
+                    const Center(
+                        child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text("No other addresses saved."),
+                    )),
+                  ListView.separated(
+                    itemCount: otherAddresses.length,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final address = otherAddresses[index];
+                      return Dismissible(
+                          key: ValueKey(address.entityId),
+                          direction: DismissDirection.endToStart,
+                          onDismissed: (_) => _deleteAddress(address.entityId),
+                          background: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            decoration: BoxDecoration(
+                                color: theme.error,
+                                borderRadius: BorderRadius.circular(12)),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Icon(Icons.delete, color: Colors.white),
+                                SizedBox(width: 8),
+                                Text('Delete',
+                                    style: TextStyle(color: Colors.white)),
+                              ],
+                            ),
+                          ),
+                          child: _buildAddressListItem(address, false, theme));
+                    },
+                  ),
+                ],
+              ),
+            );
+          }
+          return _buildEmptyState(context);
+        },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.of(context).push(
+        onPressed: () async {
+          final result = await Navigator.of(context).push(
               MaterialPageRoute(builder: (context) => const AddAddressPage()));
+          if (result == true) {
+            _refreshAddresses();
+          }
         },
         backgroundColor: theme.primary,
         foregroundColor: Colors.white,
@@ -105,8 +163,42 @@ class _AddressPageState extends State<AddressPage> {
     );
   }
 
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.location_off_outlined, size: 80, color: Colors.grey),
+          const SizedBox(height: 16),
+          const Text("No Saved Addresses",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          const Text("Your saved addresses will appear here."),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.add),
+            label: const Text('Add New Address'),
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size(200, 50),
+              backgroundColor: FlutterFlowTheme.of(context).primary,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () async {
+              final result = await Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => const AddAddressPage()));
+              if (result == true) {
+                _refreshAddresses();
+              }
+            },
+          )
+        ],
+      ),
+    );
+  }
+
   Widget _buildAddressListItem(
-      AddressModel address, bool isPreferred, FlutterFlowTheme theme) {
+      ClientAddress address, bool isPreferred, FlutterFlowTheme theme) {
     return Card(
       elevation: 0,
       color:
@@ -139,14 +231,16 @@ class _AddressPageState extends State<AddressPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    address.nickname,
+                    address.title,
                     style: const TextStyle(
                         fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    address.fullAddress,
+                    address.addressFormatted,
                     style: const TextStyle(fontSize: 14, color: Colors.black54),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -155,7 +249,7 @@ class _AddressPageState extends State<AddressPage> {
               Icon(Icons.check_circle, color: theme.primary)
             else
               TextButton(
-                onPressed: () => _setAsPreferred(address.id),
+                onPressed: () => _setAsPreferred(address.entityId),
                 child: Text(
                   'Set as Preferred',
                   style: TextStyle(
