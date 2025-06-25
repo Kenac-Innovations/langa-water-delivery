@@ -63,14 +63,14 @@ public class ClientPaymentCardServiceImpl implements ClientPaymentCardService {
 
     @Override
     public List<ClientPaymentCardResponseDto> getCardsByClient(Long clientId) {
-        return cardRepository.findByClientEntity_EntityId(clientId).stream()
+        return cardRepository.findByClient_EntityId(clientId).stream()
                 .map(this::toDto)
                 .toList();
     }
 
     @Override
     public void setDefaultCard(Long clientId, Long cardId) {
-        List<ClientPaymentCardEntity> cards = cardRepository.findByClientEntity_EntityId(clientId);
+        List<ClientPaymentCardEntity> cards = cardRepository.findByClient_EntityId(clientId);
 
         for (ClientPaymentCardEntity card : cards) {
             card.setIsDefault(card.getEntityId().equals(cardId));

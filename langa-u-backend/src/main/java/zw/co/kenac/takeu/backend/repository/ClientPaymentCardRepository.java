@@ -15,6 +15,7 @@ import java.util.List;
 
 @Repository
 public interface ClientPaymentCardRepository extends JpaRepository<ClientPaymentCardEntity, Long> {
-    List<ClientPaymentCardEntity> findByClientEntity_EntityId(Long clientId);
+    List<ClientPaymentCardEntity> findByClient_EntityId(Long clientId);
 }
+
 
