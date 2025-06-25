@@ -102,18 +102,17 @@ class DropOffLocationRequestDto {
 
 class ScheduledDetailsRequestDto {
   final String scheduledDate;
-  final String? scheduledTime;
+  final String scheduledTime;
 
   ScheduledDetailsRequestDto({
     required this.scheduledDate,
-    this.scheduledTime,
+    required this.scheduledTime,
   });
 
   Map<String, dynamic> toJson() {
     return {
       'scheduledDate': scheduledDate,
-      'scheduledTime':
-          scheduledTime ?? "", // FIX: Ensure empty string instead of null
+      'scheduledTime': scheduledTime,
     };
   }
 }

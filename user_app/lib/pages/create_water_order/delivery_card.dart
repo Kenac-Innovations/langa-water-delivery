@@ -3,7 +3,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:langas_user/flutter_flow/flutter_flow_theme.dart';
 import 'package:langas_user/models/user_model.dart';
-
 import 'package:langas_user/pages/create_water_order/create_water_order_page.dart';
 import 'package:langas_user/pages/create_water_order/form_widgets.dart';
 import 'package:langas_user/pages/create_water_order/location_picker_page.dart';
@@ -51,13 +50,11 @@ class _DeliveryCardState extends State<DeliveryCard> {
     final picked =
         await showTimePicker(context: context, initialTime: TimeOfDay.now());
     if (picked != null && mounted) {
-      setState(() {
-        final timeFormat = DateFormat("HH:mm:00");
-        final now = DateTime.now();
-        final dt =
-            DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
-        widget.delivery.timeController.text = timeFormat.format(dt);
-      });
+      final timeFormat = DateFormat("HH:mm:00");
+      final now = DateTime.now();
+      final dt =
+          DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
+      widget.delivery.timeController.text = timeFormat.format(dt);
     }
   }
 
@@ -115,6 +112,7 @@ class _DeliveryCardState extends State<DeliveryCard> {
               hintText: 'e.g., House 123, Main Street',
               maxLines: 2,
             ),
+            const SizedBox(height: 8),
             GestureDetector(
               onTap: () async {
                 final result = await Navigator.push<LocationResult>(
@@ -162,11 +160,12 @@ class _DeliveryCardState extends State<DeliveryCard> {
               ),
             ),
             if (widget.delivery.latLng == null)
-              const Padding(
-                padding: EdgeInsets.only(top: 8.0),
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
                 child: Text(
                   'Disclaimer: Without a map pin, we cannot determine if your address is in our service area.',
-                  style: TextStyle(color: Colors.orange, fontSize: 12),
+                  style: theme.bodySmall
+                      .override(color: theme.secondaryText, fontSize: 12),
                 ),
               ),
             const SizedBox(height: 16),

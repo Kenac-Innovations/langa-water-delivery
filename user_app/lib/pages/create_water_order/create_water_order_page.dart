@@ -289,7 +289,7 @@ class _CreateWaterOrderPageState extends State<CreateWaterOrderPage> {
 
           if (state is WaterOrderCreationSuccess) {
             _showSuccessToast("Order created successfully!");
-            context.go('/My_Orders');
+            context.pushNamed('My_Orders');
           }
           if (state is WaterOrderFailure) {
             _showErrorToast(state.failure.message);
