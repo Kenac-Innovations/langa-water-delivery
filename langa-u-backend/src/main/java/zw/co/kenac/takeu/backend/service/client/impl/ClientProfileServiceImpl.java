@@ -67,6 +67,7 @@ public class ClientProfileServiceImpl implements ClientProfileService {
     private ClientAddressesEntityResponseDto convertToDto(ClientAddressesEntity a){
 
         return ClientAddressesEntityResponseDto.builder()
+                .entityId(a.getEntityId())
                 .addressEntered(a.getAddressEntered())
                 .title(a.getTitle())
                 .isDefault(a.getIsDefault())
@@ -88,8 +89,13 @@ public class ClientProfileServiceImpl implements ClientProfileService {
                 .latitude(dto.getLatitude())
                 .longitude(dto.getLongitude())
                 .addressFormatted(dto.getAddressFormatted())
+                .isDefault(false)
                 .client(client)
                 .build();
+
+        // Force geohash update (since builder skips setter logic)
+        entity.setLatitude(dto.getLatitude());
+        entity.setLongitude(dto.getLongitude());
 
         clientAddressRepository.save(entity);
     }
