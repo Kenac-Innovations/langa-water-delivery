@@ -83,6 +83,7 @@ public class ClientProfileServiceImpl implements ClientProfileService {
                 .orElseThrow(() -> new ResourceNotFoundException("Client not found with ID: " + dto.getClientId()));
 
         ClientAddressesEntity entity = ClientAddressesEntity.builder()
+                .title(dto.getTitle())
                 .addressEntered(dto.getAddressEntered())
                 .latitude(dto.getLatitude())
                 .longitude(dto.getLongitude())
@@ -98,6 +99,7 @@ public class ClientProfileServiceImpl implements ClientProfileService {
         ClientAddressesEntity entity = clientAddressRepository.findById(addressId)
                 .orElseThrow(() -> new ResourceNotFoundException("Address not found with ID: " + addressId));
 
+        entity.setTitle(dto.getTitle());
         entity.setAddressEntered(dto.getAddressEntered());
         entity.setLatitude(dto.getLatitude());
         entity.setLongitude(dto.getLongitude());
