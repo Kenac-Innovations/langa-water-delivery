@@ -56,7 +56,7 @@ class _SplashScreenWidgetState extends State<SplashScreenWidget>
 
     return Scaffold(
       key: scaffoldKey,
-      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
+      backgroundColor: Colors.white,
       body: SafeArea(
         top: true,
         child: Container(
@@ -79,7 +79,7 @@ class _SplashScreenWidgetState extends State<SplashScreenWidget>
                     return Container(
                       width: 140.0,
                       height: 120.0,
-                      color: Colors.grey.shade300,
+                      color: Colors.white,
                       child: const Icon(Icons.image_not_supported,
                           size: 50, color: Colors.grey),
                     );

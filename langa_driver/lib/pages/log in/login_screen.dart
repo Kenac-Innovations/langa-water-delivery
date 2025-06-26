@@ -57,7 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       const SizedBox(height: 80),
                       Image.asset(
-                        'assets/images/easy_go_logo.png',
+                        'assets/images/logo.png',
                         height: 150,
                         fit: BoxFit.contain,
                         errorBuilder: (context, error, stackTrace) {
