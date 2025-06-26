@@ -22,7 +22,7 @@ import 'package:langas_user/util/apps_enums.dart';
 class DeliveryModel {
   final int id = DateTime.now().millisecondsSinceEpoch;
   final TextEditingController quantityController =
-      TextEditingController(text: '1');
+      TextEditingController(text: '5,000');
   final TextEditingController instructionsController = TextEditingController();
   final TextEditingController dateController = TextEditingController();
   final TextEditingController timeController = TextEditingController();
@@ -37,7 +37,7 @@ class DeliveryModel {
 
   DeliveryModel({
     this.latLng,
-    this.isScheduled = false,
+    this.isScheduled = true, // Default to scheduled
     this.useMyDetails = false,
     this.pickedAddressDisplay = "Tap to pin location on map (Optional)",
   });
@@ -74,14 +74,12 @@ class _CreateWaterOrderPageState extends State<CreateWaterOrderPage> {
   WaterPaymentType _selectedPaymentMethod = WaterPaymentType.ON_DELIVERY;
   bool _isLoading = false;
   double _totalAmount = 0.0;
-  final double _pricePerLitre = 0.5; // Example price per litre
-
-  late GeolocationService _geolocationService;
+  final double _basePrice = 45.0;
+  final int _baseLitres = 5000;
 
   @override
   void initState() {
     super.initState();
-    _geolocationService = GeolocationService();
 
     if (widget.repeatOrder != null) {
       _prepopulateFromRepeatOrder();
@@ -95,12 +93,13 @@ class _CreateWaterOrderPageState extends State<CreateWaterOrderPage> {
       final newDeliveryModel = DeliveryModel(
         latLng: LatLng(delivery.dropOffLocation.dropOffLatitude,
             delivery.dropOffLocation.dropOffLongitude),
-        isScheduled: delivery.isScheduled ?? false,
+        isScheduled: delivery.isScheduled ?? true,
         pickedAddressDisplay: delivery.dropOffLocation.dropOffLocation,
       );
       newDeliveryModel.manualAddressController.text =
           delivery.dropOffLocation.dropOffAddressType ?? '';
-      newDeliveryModel.quantityController.text = delivery.quantity.toString();
+      newDeliveryModel.quantityController.text =
+          NumberFormat('###,###,###,###').format(delivery.quantity);
       newDeliveryModel.instructionsController.text =
           delivery.deliveryInstructions ?? '';
       newDeliveryModel.contactNameController.text =
@@ -147,9 +146,12 @@ class _CreateWaterOrderPageState extends State<CreateWaterOrderPage> {
   void _calculatePrices() {
     double total = 0;
     for (var delivery in _deliveries) {
-      final quantity = int.tryParse(delivery.quantityController.text) ?? 0;
-      total += quantity * _pricePerLitre;
-      delivery.price = quantity * _pricePerLitre;
+      final quantity =
+          int.tryParse(delivery.quantityController.text.replaceAll(',', '')) ??
+              0;
+      final pricePerLitre = _basePrice / _baseLitres;
+      delivery.price = quantity * pricePerLitre;
+      total += delivery.price;
     }
     setState(() {
       _totalAmount = total;
@@ -199,7 +201,9 @@ class _CreateWaterOrderPageState extends State<CreateWaterOrderPage> {
           dropOffContactPhone: delivery.contactPhoneController.text.trim(),
         ),
         isScheduled: delivery.isScheduled,
-        quantity: int.tryParse(delivery.quantityController.text) ?? 0,
+        quantity: int.tryParse(
+                delivery.quantityController.text.replaceAll(',', '')) ??
+            0,
         deliveryInstructions: delivery.instructionsController.text.trim(),
         scheduledDetails: scheduledDetails,
       );
@@ -222,8 +226,11 @@ class _CreateWaterOrderPageState extends State<CreateWaterOrderPage> {
     if (_currentStep == 0) {
       bool allValid = true;
       for (var delivery in _deliveries) {
+        final quantity =
+            int.tryParse(delivery.quantityController.text.replaceAll(',', ''));
         if (delivery.manualAddressController.text.trim().isEmpty ||
-            (int.tryParse(delivery.quantityController.text) ?? 0) <= 0 ||
+            quantity == null ||
+            quantity < 5000 ||
             delivery.contactNameController.text.trim().isEmpty ||
             delivery.contactPhoneController.text.trim().isEmpty ||
             (delivery.isScheduled &&
@@ -234,7 +241,8 @@ class _CreateWaterOrderPageState extends State<CreateWaterOrderPage> {
         }
       }
       if (!allValid) {
-        _showErrorToast("Please fill all required fields for each delivery.");
+        _showErrorToast(
+            "Please fill all required fields for each delivery and ensure quantity is at least 5,000 litres.");
         return;
       }
       _calculatePrices();
@@ -251,6 +259,21 @@ class _CreateWaterOrderPageState extends State<CreateWaterOrderPage> {
     if (_currentStep > 0) {
       setState(() => _currentStep -= 1);
     }
+  }
+
+  void _showImmediateDeliveryWarning() {
+    showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+              title: const Text("Immediate Delivery"),
+              content: const Text(
+                  "Please note that immediate deliveries will incur an extra charge."),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text("OK"))
+              ],
+            ));
   }
 
   @override
@@ -289,7 +312,7 @@ class _CreateWaterOrderPageState extends State<CreateWaterOrderPage> {
 
           if (state is WaterOrderCreationSuccess) {
             _showSuccessToast("Order created successfully!");
-            context.pushNamed('My_Orders');
+            context.go('/My_Orders');
           }
           if (state is WaterOrderFailure) {
             _showErrorToast(state.failure.message);
@@ -386,6 +409,11 @@ class _CreateWaterOrderPageState extends State<CreateWaterOrderPage> {
                     });
                   },
                   currentUser: currentUser,
+                  onDeliveryTypeChange: (isImmediate) {
+                    if (isImmediate) {
+                      _showImmediateDeliveryWarning();
+                    }
+                  },
                 );
               },
             ),

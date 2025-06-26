@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:langas_user/flutter_flow/flutter_flow_theme.dart';
@@ -7,6 +8,26 @@ import 'package:langas_user/pages/create_water_order/create_water_order_page.dar
 import 'package:langas_user/pages/create_water_order/form_widgets.dart';
 import 'package:langas_user/pages/create_water_order/location_picker_page.dart';
 
+class ThousandsSeparatorInputFormatter extends TextInputFormatter {
+  static const separator = ',';
+
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    if (newValue.text.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    String a = newValue.text.replaceAll(separator, '');
+    var formatter = NumberFormat('###,###,###,###');
+    String newText = formatter.format(int.parse(a));
+
+    return newValue.copyWith(
+        text: newText,
+        selection: TextSelection.collapsed(offset: newText.length));
+  }
+}
+
 class DeliveryCard extends StatefulWidget {
   final DeliveryModel delivery;
   final int index;
@@ -14,6 +35,7 @@ class DeliveryCard extends StatefulWidget {
   final VoidCallback onRemove;
   final Function(LatLng?, String) onLocationUpdate;
   final User? currentUser;
+  final Function(bool isImmediate) onDeliveryTypeChange;
 
   const DeliveryCard({
     super.key,
@@ -22,7 +44,8 @@ class DeliveryCard extends StatefulWidget {
     required this.showRemoveButton,
     required this.onRemove,
     required this.onLocationUpdate,
-    this.currentUser,
+    required this.currentUser,
+    required this.onDeliveryTypeChange,
   });
 
   @override
@@ -47,14 +70,48 @@ class _DeliveryCardState extends State<DeliveryCard> {
   }
 
   Future<void> _pickTime() async {
+    final now = DateTime.now();
+    DateTime selectedDate;
+    try {
+      selectedDate =
+          DateFormat('yyyy-MM-dd').parse(widget.delivery.dateController.text);
+    } catch (e) {
+      selectedDate = now; // Default to now if parsing fails
+    }
+
+    TimeOfDay initialTime =
+        TimeOfDay.fromDateTime(now.add(const Duration(hours: 2)));
+
+    // If selected date is today, ensure initial time is in the future
+    if (selectedDate.year == now.year &&
+        selectedDate.month == now.month &&
+        selectedDate.day == now.day) {
+      if (now.hour + 2 > 23) {
+        // Cannot select a time today, handle this case if necessary
+      }
+    }
+
     final picked =
-        await showTimePicker(context: context, initialTime: TimeOfDay.now());
+        await showTimePicker(context: context, initialTime: initialTime);
     if (picked != null && mounted) {
-      final timeFormat = DateFormat("HH:mm:00");
-      final now = DateTime.now();
-      final dt =
-          DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
-      widget.delivery.timeController.text = timeFormat.format(dt);
+      final selectedDateTime = DateTime(selectedDate.year, selectedDate.month,
+          selectedDate.day, picked.hour, picked.minute);
+      final twoHoursFromNow = now.add(const Duration(hours: 2));
+
+      // Validate time if the selected date is today
+      if (selectedDateTime.isBefore(twoHoursFromNow) &&
+          selectedDate
+              .isAtSameMomentAs(DateTime(now.year, now.month, now.day))) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Scheduled time must be at least 2 hours from now."),
+          backgroundColor: Colors.orange,
+        ));
+        return;
+      }
+
+      final timeFormat = DateFormat("HH:mm:ss");
+      setState(() => widget.delivery.timeController.text =
+          timeFormat.format(selectedDateTime));
     }
   }
 
@@ -112,7 +169,6 @@ class _DeliveryCardState extends State<DeliveryCard> {
               hintText: 'e.g., House 123, Main Street',
               maxLines: 2,
             ),
-            const SizedBox(height: 8),
             GestureDetector(
               onTap: () async {
                 final result = await Navigator.push<LocationResult>(
@@ -190,17 +246,34 @@ class _DeliveryCardState extends State<DeliveryCard> {
                 labelText: 'Contact Phone',
                 hintText: 'e.g., +263771234567',
                 keyboardType: TextInputType.phone),
-            FormWidgets.buildTextField(
-                context: context,
-                controller: widget.delivery.quantityController,
-                labelText: 'Quantity (Litres)',
-                hintText: 'e.g., 20',
-                keyboardType: TextInputType.number),
+            TextFormField(
+              controller: widget.delivery.quantityController,
+              decoration: FormWidgets.buildInputDecoration(context,
+                  labelText: 'Quantity (Litres)',
+                  hintText: 'Minimum 5,000 Litres'),
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                ThousandsSeparatorInputFormatter(),
+              ],
+              validator: (val) {
+                if (val == null || val.isEmpty) {
+                  return 'Please enter a quantity';
+                }
+                final quantity = int.tryParse(val.replaceAll(',', ''));
+                if (quantity == null || quantity < 5000) {
+                  return 'Minimum 5,000 Litres';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
             FormWidgets.buildDeliveryTypeToggle(
                 context: context,
-                isImmediate: !widget.delivery.isScheduled,
-                onChanged: (isImmediate) {
-                  setState(() => widget.delivery.isScheduled = !isImmediate);
+                isScheduled: widget.delivery.isScheduled,
+                onChanged: (isScheduled) {
+                  setState(() => widget.delivery.isScheduled = isScheduled);
+                  widget.onDeliveryTypeChange(!isScheduled);
                 }),
             if (widget.delivery.isScheduled)
               Row(
