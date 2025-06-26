@@ -51,6 +51,7 @@ public class DeliveryEventListeners {
         firebaseService.updateActiveDeliveriesStatuses(event.getDeliveryId(), event.getDeliveryStatus());
     }
 
+
     @EventListener(DriverDeliveryCancelEvents.class)
     private void processDriverDeliveryCancelEvent(DriverDeliveryCancelEvents event) {
         DeliveryEntity delivery = deliveryRepository.findById(event.getDeliveryId())

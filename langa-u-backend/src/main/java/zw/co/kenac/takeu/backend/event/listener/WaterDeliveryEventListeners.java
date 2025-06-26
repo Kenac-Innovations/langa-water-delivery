@@ -55,7 +55,11 @@ public class WaterDeliveryEventListeners {
         firebaseService.updateActiveDeliveriesStatuses(event.getDelivery().getEntityId(), DeliveryStatus.valueOf(event.getDelivery().getDeliveryStatus()));// here we update the record and send push notifcication
         // todo put push notification from here
     }
-
+    @EventListener(DispatchSettingsChangedEvent.class)
+    private void processDeliveryCreatedEvent(DispatchSettingsChangedEvent event) {
+        log.info("========>Received update dispatch settings changes: {}", event.getStatus());
+        firebaseService.updateAutoDispatchStatusInOpenDeliveries(event.getStatus());
+    }
     @EventListener(DriverDeliveryCancelEvents.class)
     private void processDriverDeliveryCancelEvent(DriverDeliveryCancelEvents event) {
 //        WaterDelivery delivery = deliveryRepository.findById(event.getDeliveryId())

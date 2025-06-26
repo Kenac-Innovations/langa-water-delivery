@@ -1,10 +1,7 @@
 package zw.co.kenac.takeu.backend.service.waterdelivery.impl;
 
 import com.github.davidmoten.geo.GeoHash;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -88,7 +85,7 @@ public class FirebaseWaterServiceImpl implements FirebaseWaterService {
             deliveryData.put("priceAmount", delivery.getPriceAmount().toString());
             deliveryData.put("autoAssignDriver", delivery.getAutoAssignDriver());
             deliveryData.put("isScheduled", delivery.getIsScheduled());
-            deliveryData.put("waterQuantityLitres",delivery.getWaterLitreQuantity().toString());
+            deliveryData.put("waterQuantityLitres", delivery.getWaterLitreQuantity().toString());
             deliveryData.put("deliveryInstructions", delivery.getDeliveryInstructions());
             deliveryData.put("deliveryStatus", delivery.getDeliveryStatus());
             deliveryData.put("commissionRequired", delivery.getCommissionRequired() != null ?
@@ -238,6 +235,36 @@ public class FirebaseWaterServiceImpl implements FirebaseWaterService {
             log.error("Error deleting delivery from Firebase: {}", e.getMessage());
             throw new RuntimeException("Error deleting delivery from Firebase", e);
         }
+    }
+    @Override
+    public void updateAutoDispatchStatusInOpenDeliveries(boolean status) {
+        updateBucketAutoDispatch(OPENDELIVERY, status);
+    }
+    public void updateBucketAutoDispatch(String bucketName, boolean status) {
+        DatabaseReference bucketRef = firebaseDatabase.getReference(bucketName);
+        bucketRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                Map<String, Object> updates = new HashMap<>();
+                for (DataSnapshot deliverySnapshot : dataSnapshot.getChildren()) {
+                    updates.put(deliverySnapshot.getKey() + "/autoDispatch", status);
+                }
+                if (!updates.isEmpty()) {
+                    bucketRef.updateChildren(updates, (error, ref) -> {
+                        if (error != null) {
+                            log.error("======> Failed to update autoDispatch status in bucket {}: {}", bucketName, error.getMessage());
+                        } else {
+                            log.info("======> Successfully updated autoDispatch status in bucket {}", bucketName);
+                        }
+                    });
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                log.error("======> Failed to read from bucket {} for autoDispatch update: {}", bucketName, databaseError.getMessage());
+            }
+        });
     }
 
     @Override

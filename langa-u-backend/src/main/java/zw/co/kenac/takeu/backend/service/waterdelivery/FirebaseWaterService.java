@@ -23,4 +23,5 @@ public interface FirebaseWaterService {
     // driver proposals section
     void addToDriverProposalForDelivery(FirebaseDriverDeliveryProposalsDto dto);
     void deleteDriverProposalForDelivery(FirebaseDriverDeliveryProposalsDto dto);
+    void updateAutoDispatchStatusInOpenDeliveries(boolean status);
 } 

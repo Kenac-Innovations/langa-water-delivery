@@ -2,6 +2,7 @@ package zw.co.kenac.takeu.backend.dto.client;
 
 import zw.co.kenac.takeu.backend.dto.DeliveryDriverResponse;
 import zw.co.kenac.takeu.backend.dto.DeliveryVehicleResponse;
+import zw.co.kenac.takeu.backend.dto.waterdelivery.response.ClientInformationDto;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -38,4 +39,6 @@ public record ClientDeliveryResponse(
         LocalTime pickUpTime,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
+//        ,
+//        ClientInformationDto customer
 ) { }
