@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "15099634947",
+    "firebase_url": "https://Langa's-1f5d3-default-rtdb.firebaseio.com",
+    "project_id": "Langa's-1f5d3",
+    "storage_bucket": "Langa's-1f5d3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:15099634947:android:ee87a4d84826938b163536",
+        "android_client_info": {
+          "package_name": "com.kenac.langas_driver"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCM8151Is055N7cTs-CV03OsAYPGID29Q4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
