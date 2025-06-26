@@ -27,7 +27,6 @@ import zw.co.kenac.takeu.backend.model.ClientSecurityAnswerEntity;
 import zw.co.kenac.takeu.backend.model.SecurityQuestionsEntity;
 import zw.co.kenac.takeu.backend.sms.SmsService;
 
-import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -83,7 +82,7 @@ public class ClientAuthServiceImpl implements ClientAuthService {
                         .isCreditedAllowed(loginUser.getCustomer().getIsCreditAllowed())
                         .email(loginUser.getCustomer().getEmailAddress())
                         .phoneNumber(loginUser.getCustomer().getMobileNumber())
-                        .userId(loginUser.getEntityId())
+                        .clientId(loginUser.getCustomer().getEntityId())
                         .firstName(loginUser.getFirstname())
                         .build() : null)
                 .driverProfile(loginUser.getUserType().equals("DRIVER") ? new DriverProfileResponse().builder()
@@ -215,7 +214,7 @@ public class ClientAuthServiceImpl implements ClientAuthService {
                  .isCreditedAllowed(user.getCustomer().getIsCreditAllowed())
                  .email(user.getCustomer().getEmailAddress())
                  .phoneNumber(user.getCustomer().getMobileNumber())
-                 .userId(user.getEntityId())
+                 .clientId(user.getEntityId())
                  .firstName(user.getFirstname())
                  .build()).build();
     }

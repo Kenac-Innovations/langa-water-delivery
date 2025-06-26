@@ -5,8 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
-
 /**
  * @author : Jaison.Chipuka
  * @email : jaisonc@kenac.co.zw
@@ -17,7 +15,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @Builder
 public class ClientProfileResponse {
-    private Long userId;
+    private Long clientId;
     private String email;
     private String phoneNumber;
     private String firstName;
