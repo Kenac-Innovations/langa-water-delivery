@@ -1,10 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:langas_driver/bloc/auth/auth_bloc/auth_bloc_bloc.dart';
-import 'package:langas_driver/bloc/auth/auth_bloc/auth_bloc_state.dart';
-import 'package:langas_driver/bloc/vehicles/vehicle_management/vehicle_management_bloc_bloc.dart';
-import 'package:langas_driver/bloc/vehicles/vehicle_management/vehicle_management_bloc_event.dart';
-import 'package:langas_driver/bloc/vehicles/vehicle_management/vehicle_management_bloc_state.dart';
 import 'package:langas_driver/flutter_flow/flutter_flow_theme.dart';
 import 'package:langas_driver/models/vehicle_model.dart';
 import 'package:langas_driver/nav/nav.dart';
@@ -19,84 +13,64 @@ class VehicleManagementScreen extends StatefulWidget {
 }
 
 class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
-  String? _driverId;
+  // Hardcoded list of available water delivery trucks
+  final List<Vehicle> _availableVehicles = [
+    Vehicle(
+      vehicleId: 1,
+      vehicleModel: 'H-100',
+      vehicleColor: 'White',
+      vehicleMake: 'Hyundai',
+      licensePlateNo: 'AGE 1234',
+      active: false,
+      vehicleType: VehicleType.TRUCK,
+      vehicleStatus: VehicleStatus.APPROVED,
+      frontImageUrl: 'https://placehold.co/600x400/FFFFFF/000000?text=Front',
+      backImageUrl: 'https://placehold.co/600x400/FFFFFF/000000?text=Back',
+      sideImageUrl: 'https://placehold.co/600x400/FFFFFF/000000?text=Side',
+    ),
+    Vehicle(
+      vehicleId: 2,
+      vehicleModel: 'Canter',
+      vehicleColor: 'Blue',
+      vehicleMake: 'Mitsubishi',
+      licensePlateNo: 'ACF 5678',
+      active: true, // Example of an active vehicle
+      vehicleType: VehicleType.TRUCK,
+      vehicleStatus: VehicleStatus.APPROVED,
+      frontImageUrl: 'https://placehold.co/600x400/FFFFFF/000000?text=Front',
+      backImageUrl: 'https://placehold.co/600x400/FFFFFF/000000?text=Back',
+      sideImageUrl: 'https://placehold.co/600x400/FFFFFF/000000?text=Side',
+    ),
+    Vehicle(
+      vehicleId: 3,
+      vehicleModel: 'Dyna',
+      vehicleColor: 'Red',
+      vehicleMake: 'Toyota',
+      licensePlateNo: 'ADE 9012',
+      active: false,
+      vehicleType: VehicleType.TRUCK,
+      vehicleStatus: VehicleStatus.PENDING,
+    ),
+  ];
 
-  @override
-  void initState() {
-    super.initState();
-    final authState = context.read<AuthBloc>().state;
-    if (authState is AuthDriverAuthenticated) {
-      _driverId = authState.authData.driverProfile?.id.toString();
-      if (_driverId != null && _driverId!.isNotEmpty) {
-        context
-            .read<VehicleManagementBloc>()
-            .add(LoadDriverVehicles(driverId: _driverId!));
-      }
-    } else {
-      print("Error: Driver ID not found in Auth state for Vehicle Management.");
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text("Authentication error. Please log in again."),
-              backgroundColor: Colors.red),
-        );
-        context.go('/loginPage');
-      });
-    }
-  }
-
-  void _switchVehicle(String vehicleId) {
-    if (_driverId != null && _driverId!.isNotEmpty) {
-      context
-          .read<VehicleManagementBloc>()
-          .add(SetActiveVehicle(driverId: _driverId!, vehicleId: vehicleId));
-    }
-  }
-
-  void _confirmDeleteVehicle(String vehicleId) {
-    if (_driverId == null) return;
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('Delete Vehicle'),
-          content: const Text(
-              'Are you sure you want to delete this vehicle? This action cannot be undone.'),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Cancel'),
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-              },
-            ),
-            TextButton(
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete'),
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                context.read<VehicleManagementBloc>().add(
-                    DeleteVehicleRequested(
-                        driverId: _driverId!, vehicleId: vehicleId));
-              },
-            ),
-          ],
-        );
-      },
+  void _requestVehicle(Vehicle vehicle) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+            'Request sent for ${vehicle.vehicleMake} ${vehicle.vehicleModel}.'),
+        backgroundColor: Colors.green,
+      ),
     );
   }
 
   IconData _getVehicleTypeIcon(VehicleType type) {
     switch (type) {
-      case VehicleType.CAR:
-        return Icons.directions_car_filled_outlined;
-      case VehicleType.BIKE:
-        return Icons.pedal_bike_outlined;
       case VehicleType.TRUCK:
-        return Icons.fire_truck_outlined;
+        return Icons.local_shipping;
       case VehicleType.VAN:
-        return Icons.airport_shuttle_outlined;
+        return Icons.airport_shuttle;
       default:
-        return Icons.directions_car_outlined;
+        return Icons.directions_car;
     }
   }
 
@@ -160,8 +134,6 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
 
   Widget _buildVehicleCard(
       BuildContext context, Vehicle vehicle, FlutterFlowTheme theme) {
-    bool isCurrentlyActiveByApi = vehicle.active;
-
     return Card(
       clipBehavior: Clip.antiAliasWithSaveLayer,
       color: Colors.white,
@@ -169,9 +141,8 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12.0),
           side: BorderSide(
-            color:
-                isCurrentlyActiveByApi ? theme.primary : Colors.grey.shade300,
-            width: isCurrentlyActiveByApi ? 2.5 : 1,
+            color: vehicle.active ? theme.primary : Colors.grey.shade300,
+            width: vehicle.active ? 2.5 : 1,
           )),
       margin: const EdgeInsets.only(bottom: 16.0),
       child: Padding(
@@ -204,7 +175,7 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
                     ],
                   ),
                 ),
-                if (isCurrentlyActiveByApi)
+                if (vehicle.active)
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -244,7 +215,7 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
                               .withOpacity(0.15),
                       borderRadius: BorderRadius.circular(8)),
                   child: Text(
-                    'Approval: ${vehicle.vehicleStatus.name}',
+                    'Status: ${vehicle.vehicleStatus.name}',
                     style: theme.bodySmall.override(
                         fontFamily: 'Poppins',
                         fontWeight: FontWeight.w600,
@@ -297,64 +268,27 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
                           Text("Side", style: theme.bodySmall)
                         ]),
                       ),
-                    if (vehicle.registrationBookUrl != null)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: Column(children: [
-                          _buildImageThumbnail(
-                              vehicle.registrationBookUrl, theme),
-                          Text("Reg. Book", style: theme.bodySmall)
-                        ]),
-                      ),
                   ],
                 ),
               ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                if (!isCurrentlyActiveByApi &&
-                    vehicle.vehicleStatus == VehicleStatus.APPROVED)
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.power_settings_new, size: 18),
-                      label: const Text('SET AS ACTIVE',
-                          style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontWeight: FontWeight.bold)),
-                      onPressed: () =>
-                          _switchVehicle(vehicle.vehicleId.toString()),
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: theme.success,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8))),
-                    ),
-                  ),
-                if (!isCurrentlyActiveByApi &&
-                    vehicle.vehicleStatus == VehicleStatus.APPROVED)
-                  const SizedBox(
-                      width: 8), // Add space if switch button is visible
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: Icon(Icons.delete_outline,
-                        size: 18, color: theme.error),
-                    label: Text('DELETE',
-                        style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontWeight: FontWeight.bold,
-                            color: theme.error)),
-                    onPressed: () =>
-                        _confirmDeleteVehicle(vehicle.vehicleId.toString()),
-                    style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: theme.error),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8))),
-                  ),
+            if (!vehicle.active)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.check, size: 18),
+                  label: const Text('REQUEST VEHICLE',
+                      style: TextStyle(
+                          fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+                  onPressed: () => _requestVehicle(vehicle),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8))),
                 ),
-              ],
-            ),
+              ),
           ],
         ),
       ),
@@ -369,7 +303,7 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
       appBar: AppBar(
         backgroundColor: theme.primary,
         title: Text(
-          'My Vehicles',
+          'Available Delivery Trucks',
           style: theme.headlineMedium.override(
             fontFamily: 'Poppins',
             color: Colors.white,
@@ -386,235 +320,31 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: () {
-              if (_driverId != null && _driverId!.isNotEmpty) {
-                context
-                    .read<VehicleManagementBloc>()
-                    .add(LoadDriverVehicles(driverId: _driverId!));
-              }
+              // Can be used for future refresh logic if needed
             },
           ),
         ],
       ),
       backgroundColor: theme.secondaryBackground,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          if (_driverId != null) {
-            context.push('/addVehicle');
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                  content: Text('Cannot add vehicle: Driver ID missing.'),
-                  backgroundColor: Colors.red),
-            );
-          }
-        },
-        backgroundColor: theme.primary,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text("ADD VEHICLE"),
-      ),
-      body: BlocConsumer<VehicleManagementBloc, VehicleManagementState>(
-        listener: (context, state) {
-          if (state is VehicleActionFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                  content: Text('Error: ${state.failure.message}'),
-                  backgroundColor: Colors.red),
-            );
-          } else if (state is VehicleCreateSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                  content:
-                      Text('Vehicle added successfully! Awaiting approval.'),
-                  backgroundColor: Colors.green),
-            );
-            if (_driverId != null) {
-              context
-                  .read<VehicleManagementBloc>()
-                  .add(LoadDriverVehicles(driverId: _driverId!));
-            }
-          } else if (state is VehicleSwitchSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                  content: Text(state.successMessage),
-                  backgroundColor: Colors.green),
-            );
-            if (_driverId != null) {
-              context
-                  .read<VehicleManagementBloc>()
-                  .add(LoadDriverVehicles(driverId: _driverId!));
-            }
-          } else if (state is VehicleDeleteSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                  content: Text(state.message), backgroundColor: Colors.green),
-            );
-            if (_driverId != null) {
-              context
-                  .read<VehicleManagementBloc>()
-                  .add(LoadDriverVehicles(driverId: _driverId!));
-            }
-          }
-        },
-        builder: (context, state) {
-          if (state is VehicleInitial ||
-              (state is VehicleLoading && state.props.isEmpty)) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (state is VehicleListLoadFailure) {
-            return Center(
+      body: _availableVehicles.isEmpty
+          ? Center(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('Failed to load vehicles: ${state.failure.message}'),
-                  const SizedBox(height: 10),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (_driverId != null) {
-                        context
-                            .read<VehicleManagementBloc>()
-                            .add(LoadDriverVehicles(driverId: _driverId!));
-                      }
-                    },
-                    child: const Text('Retry'),
-                  )
-                ],
-              ),
-            );
-          } else if (state is VehicleListLoadSuccess ||
-              state is VehicleActionFailure ||
-              state is VehicleCreateSuccess ||
-              state is VehicleSwitchSuccess ||
-              state is VehicleDeleteSuccess ||
-              state is VehicleActionInProgress) {
-            List<Vehicle> allVehicles = [];
-            bool showLoadingOverlay = state is VehicleActionInProgress;
-
-            Vehicle? activeVehicleFromApiAttribute;
-            List<Vehicle> otherVehiclesToList = [];
-
-            if (state is VehicleListLoadSuccess) {
-              allVehicles = state.vehicles;
-            } else if (state is VehicleActionFailure) {
-              allVehicles = state.lastKnownVehicles;
-            } else if (state is VehicleCreateSuccess ||
-                state is VehicleSwitchSuccess ||
-                state is VehicleDeleteSuccess ||
-                state is VehicleActionInProgress) {
-              final currentState = context.read<VehicleManagementBloc>().state;
-              if (currentState is VehicleListLoadSuccess) {
-                allVehicles = currentState.vehicles;
-              } else if (currentState is VehicleActionFailure) {
-                allVehicles = currentState.lastKnownVehicles;
-              }
-            }
-
-            try {
-              activeVehicleFromApiAttribute =
-                  allVehicles.firstWhere((v) => v.active);
-              otherVehiclesToList =
-                  allVehicles.where((v) => !v.active).toList();
-            } catch (e) {
-              activeVehicleFromApiAttribute = null;
-              otherVehiclesToList = allVehicles;
-            }
-
-            if (allVehicles.isEmpty &&
-                !(state is VehicleLoading) &&
-                !(state is VehicleActionInProgress)) {
-              return Center(
-                  child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.no_transfer_outlined,
-                      size: 80, color: theme.secondaryText.withOpacity(0.6)),
-                  const SizedBox(height: 16),
-                  Text('No vehicles found.', style: theme.titleMedium),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Tap the "+" button to add your first vehicle.',
-                    style: theme.bodyMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ));
-            }
-
-            return Stack(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                RefreshIndicator(
-                  onRefresh: () async {
-                    if (_driverId != null) {
-                      context
-                          .read<VehicleManagementBloc>()
-                          .add(LoadDriverVehicles(driverId: _driverId!));
-                    }
-                  },
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-                    children: [
-                      if (activeVehicleFromApiAttribute != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8.0),
-                          child: Text("ACTIVE VEHICLE",
-                              style: theme.titleSmall.override(
-                                  fontFamily: 'Poppins',
-                                  color: theme.primary,
-                                  fontWeight: FontWeight.bold)),
-                        ),
-                      if (activeVehicleFromApiAttribute != null)
-                        _buildVehicleCard(
-                            context, activeVehicleFromApiAttribute, theme),
-                      if (activeVehicleFromApiAttribute != null &&
-                          otherVehiclesToList.isNotEmpty)
-                        const SizedBox(height: 24),
-                      if (otherVehiclesToList.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8.0),
-                          child: Text(
-                              activeVehicleFromApiAttribute != null
-                                  ? "OTHER VEHICLES"
-                                  : "AVAILABLE VEHICLES",
-                              style: theme.titleSmall.override(
-                                  fontFamily: 'Poppins',
-                                  color: theme.secondaryText,
-                                  fontWeight: FontWeight.bold)),
-                        ),
-                      ...otherVehiclesToList
-                          .map((vehicle) =>
-                              _buildVehicleCard(context, vehicle, theme))
-                          .toList(),
-                      if (activeVehicleFromApiAttribute == null &&
-                          allVehicles.isNotEmpty &&
-                          !(state is VehicleLoading) &&
-                          !(state is VehicleActionInProgress) &&
-                          otherVehiclesToList.isEmpty) ...[
-                        Text("AVAILABLE VEHICLES",
-                            style: theme.titleSmall.override(
-                                fontFamily: 'Poppins',
-                                color: theme.secondaryText,
-                                fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 8),
-                        ...allVehicles
-                            .map((vehicle) =>
-                                _buildVehicleCard(context, vehicle, theme))
-                            .toList(),
-                      ]
-                    ],
-                  ),
-                ),
-                if (showLoadingOverlay)
-                  Container(
-                      color: Colors.black.withOpacity(0.3),
-                      child: Center(
-                          child:
-                              CircularProgressIndicator(color: theme.primary)))
+                Icon(Icons.no_transfer_outlined,
+                    size: 80, color: theme.secondaryText.withOpacity(0.6)),
+                const SizedBox(height: 16),
+                Text('No vehicles available.', style: theme.titleMedium),
               ],
-            );
-          } else {
-            return const Center(child: Text('Manage your vehicles here.'));
-          }
-        },
-      ),
+            ))
+          : ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+              itemCount: _availableVehicles.length,
+              itemBuilder: (context, index) {
+                final vehicle = _availableVehicles[index];
+                return _buildVehicleCard(context, vehicle, theme);
+              },
+            ),
     );
   }
 }

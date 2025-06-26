@@ -2,28 +2,14 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:langas_driver/bloc/auth/auth_bloc/auth_bloc_bloc.dart';
-import 'package:langas_driver/bloc/auth/auth_bloc/auth_bloc_state.dart';
-import 'package:langas_driver/bloc/delivery/current_deliveries_bloc/current_deliveries_bloc_bloc.dart';
-import 'package:langas_driver/bloc/delivery/current_deliveries_bloc/current_deliveries_bloc_event.dart';
-import 'package:langas_driver/bloc/delivery/current_deliveries_bloc/current_deliveries_bloc_state.dart';
-import 'package:langas_driver/dto/delivery_dto.dart';
 import 'package:langas_driver/flutter_flow/flutter_flow_icon_button.dart';
 import 'package:langas_driver/flutter_flow/flutter_flow_theme.dart';
 import 'package:langas_driver/models/delivery_models.dart';
 import 'package:langas_driver/nav/nav.dart';
-import 'package:langas_driver/services/geolocation.dart';
-import 'package:langas_driver/services/location_tracking.dart';
-import 'package:langas_driver/services/permision_helper.dart';
 import 'package:langas_driver/utils/delivery_enums.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 class CurrentDeliveriesWidget extends StatefulWidget {
   const CurrentDeliveriesWidget({super.key});
@@ -41,29 +27,82 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
   final TextEditingController _otpController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
 
-  bool _isLoading = false;
-  String? _driverId;
-  Position? _currentPosition;
-
-  late GeolocationService _geolocationService;
-  late CurrentDeliveriesBloc _currentDeliveriesBloc;
-  late LocationTrackingManager _locationManager;
+  // Hardcoded sample data for water deliveries
+  final List<Delivery> _deliveries = [
+    Delivery(
+      deliverId: 101,
+      priceAmount: 15.50,
+      currency: 'USD',
+      sensitivity: Sensitivity.BASIC,
+      paymentStatus: PaymentStatus.PAID,
+      pickupLatitude: -17.8252,
+      pickupLongitude: 31.0335,
+      pickupLocation: '123 Water Plant Ave, Harare',
+      pickupContactName: 'Harare Water',
+      pickupContactPhone: '0777123456',
+      dropOffLatitude: -17.8352,
+      dropOffLongitude: 31.0435,
+      dropOffLocation: '456 Aqua St, Borrowdale',
+      dropOffContactName: 'John Doe',
+      dropOffContactPhone: '0777654321',
+      deliveryInstructions: 'Leave at the gate if no one is home.',
+      parcelDescription: '20L Water Bottle x 5',
+      vehicleType: VehicleType.TRUCK,
+      paymentMethod: PaymentMethod.E_MONEY,
+      packageWeight: 100,
+      deliveryStatus: DeliveryStatus.ASSIGNED,
+      isProposed: false,
+      commissionRequired: 1.55,
+      numberOfSeats: 0,
+      deliveryType: 'WATER',
+      isScheduled: false,
+      customer: const Customer(
+          clientId: 1,
+          firstname: 'John',
+          lastname: 'Doe',
+          mobileNumber: '0777654321',
+          emailAddress: 'john.doe@example.com'),
+    ),
+    Delivery(
+      deliverId: 102,
+      priceAmount: 25.00,
+      currency: 'USD',
+      sensitivity: Sensitivity.BASIC,
+      paymentStatus: PaymentStatus.PAID,
+      pickupLatitude: -17.8252,
+      pickupLongitude: 31.0335,
+      pickupLocation: '123 Water Plant Ave, Harare',
+      pickupContactName: 'Harare Water',
+      pickupContactPhone: '0777123456',
+      dropOffLatitude: -17.8152,
+      dropOffLongitude: 31.0235,
+      dropOffLocation: '789 Spring Rd, Avondale',
+      dropOffContactName: 'Jane Smith',
+      dropOffContactPhone: '0712987654',
+      deliveryInstructions: 'Call upon arrival.',
+      parcelDescription: '500ml Water Bottles x 2 cases',
+      vehicleType: VehicleType.VAN,
+      paymentMethod: PaymentMethod.CASH,
+      packageWeight: 24,
+      deliveryStatus: DeliveryStatus.PICKED_UP,
+      isProposed: false,
+      commissionRequired: 2.50,
+      numberOfSeats: 0,
+      deliveryType: 'WATER',
+      isScheduled: false,
+      customer: const Customer(
+          clientId: 2,
+          firstname: 'Jane',
+          lastname: 'Smith',
+          mobileNumber: '0712987654',
+          emailAddress: 'jane.smith@example.com'),
+    ),
+  ];
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _scrollController.addListener(_onScroll);
-
-    _geolocationService = context.read<GeolocationService>();
-    _currentDeliveriesBloc = context.read<CurrentDeliveriesBloc>();
-    _locationManager = context.read<LocationTrackingManager>();
-
-    final authState = context.read<AuthBloc>().state;
-    if (authState is AuthDriverAuthenticated) {
-      _driverId = authState.authData.driverProfile?.id.toString();
-    }
-    _fetchInitialData();
   }
 
   @override
@@ -71,65 +110,8 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
     WidgetsBinding.instance.removeObserver(this);
     unfocusNode.dispose();
     _otpController.dispose();
-    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) async {
-    super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed) {
-      var statusWhenInUse = await Permission.locationWhenInUse.status;
-      var statusAlways = await Permission.locationAlways.status;
-    }
-  }
-
-  Future<void> _fetchInitialData({bool isRefresh = true}) async {
-    if (!mounted) return;
-    setState(() => _isLoading = true);
-
-    try {
-      _currentPosition = await _geolocationService.getCurrentLocation();
-    } catch (e) {
-      print("Error getting current position in _fetchInitialData: $e");
-    }
-
-    if (!mounted) return;
-
-    if (_driverId == null) {
-      final authState = context.read<AuthBloc>().state;
-      if (authState is AuthDriverAuthenticated) {
-        _driverId = authState.authData.driverProfile?.id.toString();
-      }
-    }
-
-    if (_driverId != null && _driverId!.isNotEmpty) {
-      _currentDeliveriesBloc.add(
-          LoadCurrentDeliveries(driverId: _driverId!, isRefresh: isRefresh));
-    } else {
-      _showErrorSnackbar('Driver ID not available. Cannot load deliveries.');
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  void _onScroll() {
-    if (_isBottom) {
-      final currentState = context.read<CurrentDeliveriesBloc>().state;
-      if (currentState is CurrentDeliveriesLoadSuccess &&
-          !currentState.hasReachedMax &&
-          _driverId != null) {
-        _currentDeliveriesBloc
-            .add(LoadMoreCurrentDeliveries(driverId: _driverId!));
-      }
-    }
-  }
-
-  bool get _isBottom {
-    if (!_scrollController.hasClients) return false;
-    final maxScroll = _scrollController.position.maxScrollExtent;
-    final currentScroll = _scrollController.offset;
-    return currentScroll >= (maxScroll * 0.9);
   }
 
   void _showErrorSnackbar(String message) {
@@ -139,75 +121,13 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
     );
   }
 
-  Future<void> _showPermissionDeniedDialog() async {
-    if (!mounted) return;
-    final theme = FlutterFlowTheme.of(context);
-    await showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-          title: Text('Location Permission Required',
-              style: theme.titleMedium.override(
-                  fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-          content: Text(
-              "Background location access ('Allow all the time') is essential for tracking active deliveries. Please enable this permission in the app settings to use this feature.",
-              style: theme.bodyMedium.override(fontFamily: 'Poppins')),
-          actions: <Widget>[
-            TextButton(
-              child: Text('Cancel',
-                  style: TextStyle(
-                      color: theme.secondaryText, fontFamily: 'Poppins')),
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-              },
-            ),
-            TextButton(
-              child: Text('Open Settings',
-                  style: TextStyle(
-                      color: theme.primary,
-                      fontFamily: 'Poppins',
-                      fontWeight: FontWeight.bold)),
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                openAppSettings();
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   Future<void> _launchMapsUrl(double lat, double lng) async {
-    String googleMapsUrl;
-    Position? currentPosition = await _geolocationService.getCurrentLocation();
-    if (currentPosition != null) {
-      googleMapsUrl =
-          "https://www.google.com/maps/dir/?api=1&origin=${currentPosition.latitude},${currentPosition.longitude}&destination=$lat,$lng&travelmode=driving";
+    final Uri mapsUri =
+        Uri.parse("https://www.google.com/maps/search/?api=1&query=$lat,$lng");
+    if (await canLaunchUrl(mapsUri)) {
+      await launchUrl(mapsUri);
     } else {
-      googleMapsUrl =
-          "https://www.google.com/maps/search/?api=1&query=$lat,$lng";
-    }
-
-    final Uri mapsUri = Uri.parse(googleMapsUrl);
-    final Uri appleMapsUri = Uri.parse('maps://?daddr=$lat,$lng&dirflg=d');
-
-    if (Platform.isIOS) {
-      if (await canLaunchUrl(appleMapsUri)) {
-        await launchUrl(appleMapsUri);
-      } else if (await canLaunchUrl(mapsUri)) {
-        await launchUrl(mapsUri);
-      } else {
-        _showErrorSnackbar('Could not launch any maps app.');
-      }
-    } else {
-      if (await canLaunchUrl(mapsUri)) {
-        await launchUrl(mapsUri);
-      } else {
-        _showErrorSnackbar('Could not launch Google Maps.');
-      }
+      _showErrorSnackbar('Could not launch any maps app.');
     }
   }
 
@@ -226,7 +146,7 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
         onPressed: () async => context.go('/homePage'),
       ),
       title: Text(
-        "Current Deliveries",
+        "Current Water Deliveries",
         style: theme.headlineMedium.override(
             fontFamily: theme.headlineMediumFamily,
             color: Colors.white,
@@ -241,29 +161,11 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
           buttonSize: 60.0,
           icon: const Icon(Icons.refresh_rounded,
               color: Colors.white, size: 24.0),
-          onPressed: () => _fetchInitialData(isRefresh: true),
+          onPressed: () {},
         ),
       ],
       centerTitle: true,
       elevation: 0,
-    );
-  }
-
-  Widget _buildLoadingIndicator(FlutterFlowTheme theme) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SpinKitSpinningLines(color: theme.primary, size: 50.0, lineWidth: 2),
-          Padding(
-            padding: const EdgeInsets.only(top: 16),
-            child: Text('Loading your deliveries...',
-                style: theme.bodyMedium.override(
-                    fontFamily: theme.bodyMediumFamily,
-                    color: theme.secondaryText)),
-          ),
-        ],
-      ),
     );
   }
 
@@ -337,7 +239,7 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Pickup Parcel',
+                            Text('Pickup Water Delivery',
                                 style: FlutterFlowTheme.of(context)
                                     .headlineSmall
                                     .override(
@@ -362,12 +264,12 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Take a photo of the parcel',
+                            Text('Take a photo of the items',
                                 style:
                                     FlutterFlowTheme.of(context).titleMedium),
                             const SizedBox(height: 8),
                             Text(
-                                'Please take a clear photo of the parcel for verification purposes.',
+                                'Please take a clear photo of the water bottles for verification purposes.',
                                 style: FlutterFlowTheme.of(context).bodyMedium),
                             const SizedBox(height: 16),
                             GestureDetector(
@@ -423,14 +325,9 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: ElevatedButton(
-                                    onPressed: tempParcelImageFromSheet !=
-                                                null &&
-                                            _driverId != null
+                                    onPressed: tempParcelImageFromSheet != null
                                         ? () {
                                             Navigator.pop(bottomSheetContext);
-                                            _startPickupAndTracking(delivery,
-                                                pickupImage:
-                                                    tempParcelImageFromSheet);
                                           }
                                         : null,
                                     style: ElevatedButton.styleFrom(
@@ -463,67 +360,7 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
     );
   }
 
-  void _startPickupAndTracking(Delivery delivery, {File? pickupImage}) async {
-    bool permissionsGranted = await requestLocationPermissions();
-    if (!mounted) return;
-
-    if (!permissionsGranted) {
-      _showPermissionDeniedDialog();
-      return;
-    }
-
-    _currentPosition = await _geolocationService.getCurrentLocation();
-    if (_currentPosition == null || _driverId == null) {
-      _showErrorSnackbar("Could not get current location or driver ID.");
-      return;
-    }
-
-    final pickupDto = PickupDeliveryRequest(
-      driverId: int.parse(_driverId!),
-      latitude: _currentPosition!.latitude,
-      longitude: _currentPosition!.longitude,
-      pickupImage: pickupImage,
-    );
-    _currentDeliveriesBloc.add(
-      PickupDeliveryRequested(
-        deliveryId: delivery.deliverId.toString(),
-        driverId: _driverId!,
-        request: pickupDto,
-      ),
-    );
-
-    try {
-      await _locationManager.startTrackingService(
-          _driverId!, delivery.deliverId.toString());
-      print(
-          "[CurrentDeliveriesWidget] Background tracking initiated for ${delivery.deliverId}");
-
-      if (mounted) {
-        context.pushNamed(
-          'liveTracking',
-          pathParameters: {
-            'deliveryId': delivery.deliverId.toString(),
-          },
-          extra: {
-            'driverId': _driverId!,
-            'destinationCoordinates': LatLng(
-              delivery.dropOffLatitude,
-              delivery.dropOffLongitude,
-            ),
-            'destinationAddressForMaps':
-                "${delivery.dropOffLatitude},${delivery.dropOffLongitude}",
-          },
-        );
-      }
-    } catch (e) {
-      print(
-          "[CurrentDeliveriesWidget] Error starting tracking or navigating: $e");
-      _showErrorSnackbar("Failed to start live tracking. Check settings.");
-    }
-  }
-
-  void _showCompleteDeliveryBottomSheet(Delivery delivery,
-      {bool isRide = false}) {
+  void _showCompleteDeliveryBottomSheet(Delivery delivery) {
     _otpController.clear();
     showModalBottomSheet(
       context: context,
@@ -555,7 +392,7 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(isRide ? 'End Ride' : 'Complete Delivery',
+                        Text('Complete Delivery',
                             style: FlutterFlowTheme.of(context)
                                 .headlineSmall
                                 .override(
@@ -584,7 +421,7 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
                             style: FlutterFlowTheme.of(context).titleMedium),
                         const SizedBox(height: 8),
                         Text(
-                            'Ask the recipient for the OTP to complete the ${isRide ? 'ride' : 'delivery'}.',
+                            'Ask the recipient for the OTP to complete the delivery.',
                             style: FlutterFlowTheme.of(context).bodyMedium),
                         const SizedBox(height: 16),
                         Form(
@@ -638,42 +475,9 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
                             const SizedBox(width: 16),
                             Expanded(
                               child: ElevatedButton(
-                                onPressed: () async {
+                                onPressed: () {
                                   if (_otpController.text.length == 6) {
                                     Navigator.pop(bottomSheetContext);
-                                    _currentPosition = await _geolocationService
-                                        .getCurrentLocation();
-                                    if (_driverId != null &&
-                                        _currentPosition != null) {
-                                      final completeDto =
-                                          CompleteDeliveryRequest(
-                                        otp: _otpController.text,
-                                        driverId: int.parse(_driverId!),
-                                        latitude: _currentPosition!.latitude,
-                                        longitude: _currentPosition!.longitude,
-                                      );
-                                      _currentDeliveriesBloc.add(
-                                        CompleteDeliveryRequested(
-                                          deliveryId:
-                                              delivery.deliverId.toString(),
-                                          driverId: _driverId!,
-                                          request: completeDto,
-                                        ),
-                                      );
-                                      try {
-                                        if (await _locationManager
-                                            .isServiceRunning()) {
-                                          await _locationManager
-                                              .stopTrackingService();
-                                        }
-                                      } catch (e) {
-                                        print(
-                                            "[CurrentDeliveriesWidget] Error stopping background tracking during fallback: $e");
-                                      }
-                                    } else {
-                                      _showErrorSnackbar(
-                                          "Could not get current location or driver ID.");
-                                    }
                                   } else {
                                     ScaffoldMessenger.of(bottomSheetContext)
                                         .showSnackBar(
@@ -692,9 +496,8 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
                                     shape: RoundedRectangleBorder(
                                         borderRadius:
                                             BorderRadius.circular(8))),
-                                child: Text(isRide ? 'End Ride' : 'Complete',
-                                    style:
-                                        const TextStyle(color: Colors.white)),
+                                child: const Text('Complete',
+                                    style: TextStyle(color: Colors.white)),
                               ),
                             ),
                           ],
@@ -725,187 +528,13 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
                 onPressed: () => Navigator.of(dialogContext).pop(),
                 child: const Text('No')),
             TextButton(
-              onPressed: () async {
+              onPressed: () {
                 Navigator.of(dialogContext).pop();
-                _currentPosition =
-                    await _geolocationService.getCurrentLocation();
-                if (_driverId != null && _currentPosition != null) {
-                  final request = CancelDeliveryRequest(
-                    driverId: int.parse(_driverId!),
-                    latitude: _currentPosition!.latitude,
-                    longitude: _currentPosition!.longitude,
-                  );
-                  _currentDeliveriesBloc.add(CancelDeliveryRequested(
-                      deliveryId: delivery.deliverId.toString(),
-                      driverId: _driverId!,
-                      request: request));
-                  try {
-                    if (await _locationManager.isServiceRunning()) {
-                      await _locationManager.stopTrackingService();
-                    }
-                  } catch (e) {
-                    print(
-                        "[CurrentDeliveriesWidget] Error stopping background tracking service during cancellation: $e");
-                  }
-                } else {
-                  _showErrorSnackbar(
-                      "Could not get current location or driver ID to cancel.");
-                }
               },
               child: const Text('Yes, Cancel',
                   style: TextStyle(color: Colors.red)),
             ),
           ],
-        );
-      },
-    );
-  }
-
-  Widget _buildBody(BuildContext context, FlutterFlowTheme theme) {
-    return BlocConsumer<CurrentDeliveriesBloc, CurrentDeliveriesState>(
-      listener: (context, state) {
-        if (mounted) {
-          setState(() {
-            _isLoading = state is CurrentDeliveriesLoading ||
-                state is CurrentDeliveriesLoadingNextPage ||
-                state is DeliveryActionLoading;
-          });
-        }
-        if (state is CurrentDeliveriesLoadFailure) {
-          _showErrorSnackbar(
-              'Failed to load deliveries: ${state.failure.message}');
-        } else if (state is CurrentDeliveriesNextPageError) {
-          _showErrorSnackbar(
-              'Failed to load more deliveries: ${state.failure.message}');
-        } else if (state is DeliveryActionSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text(state.message), backgroundColor: Colors.green),
-          );
-          if (_driverId != null) {
-            _currentDeliveriesBloc.add(
-                LoadCurrentDeliveries(driverId: _driverId!, isRefresh: true));
-          }
-        } else if (state is DeliveryActionFailure) {
-          _showErrorSnackbar(
-              'Action failed for delivery ID ${state.deliveryId}: ${state.failure.message}');
-        }
-      },
-      builder: (context, state) {
-        if (state.runtimeType == CurrentDeliveriesLoading &&
-            !(state is CurrentDeliveriesLoadingNextPage) &&
-            !(state is DeliveryActionLoading)) {
-          final blocState = context.read<CurrentDeliveriesBloc>().state;
-          if (blocState is CurrentDeliveriesLoadSuccess &&
-              blocState.deliveries.isNotEmpty) {
-          } else {
-            return _buildLoadingIndicator(theme);
-          }
-        }
-
-        if (state is CurrentDeliveriesLoadFailure) {
-          final blocState = context.read<CurrentDeliveriesBloc>().state;
-          bool hasExistingData = false;
-          if (blocState is CurrentDeliveriesLoadSuccess) {
-            hasExistingData = blocState.deliveries.isNotEmpty;
-          }
-
-          if (!hasExistingData) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text('Error: ${state.failure.message}',
-                        textAlign: TextAlign.center),
-                  ),
-                  ElevatedButton(
-                    onPressed: () => _fetchInitialData(isRefresh: true),
-                    child: const Text('Retry'),
-                  )
-                ],
-              ),
-            );
-          }
-        }
-
-        List<Delivery> deliveries = [];
-        bool hasReachedMax = true;
-        bool isLoadingMore = false;
-
-        if (state is CurrentDeliveriesLoadSuccess) {
-          deliveries = state.deliveries;
-          hasReachedMax = state.hasReachedMax;
-        } else if (state is CurrentDeliveriesLoadingNextPage) {
-          deliveries = state.deliveries;
-          hasReachedMax = state.hasReachedMax;
-          isLoadingMore = true;
-        } else if (state is CurrentDeliveriesNextPageError) {
-          deliveries = state.deliveries;
-          hasReachedMax = state.hasReachedMax;
-        } else if (state is DeliveryActionLoading ||
-            state is DeliveryActionSuccess ||
-            state is DeliveryActionFailure) {
-          final currentStateFromBloc =
-              context.read<CurrentDeliveriesBloc>().state;
-          if (currentStateFromBloc is CurrentDeliveriesLoadSuccess) {
-            deliveries = currentStateFromBloc.deliveries;
-            hasReachedMax = currentStateFromBloc.hasReachedMax;
-          } else if (currentStateFromBloc is CurrentDeliveriesLoadingNextPage) {
-            deliveries = currentStateFromBloc.deliveries;
-            hasReachedMax = currentStateFromBloc.hasReachedMax;
-            isLoadingMore = true;
-          }
-        }
-
-        if (deliveries.isEmpty &&
-            !isLoadingMore &&
-            !(state is CurrentDeliveriesLoading &&
-                state.runtimeType == CurrentDeliveriesLoading) &&
-            !(state is DeliveryActionLoading)) {
-          return _buildEmptyState(theme);
-        }
-
-        if (deliveries.isEmpty && _isLoading) {
-          return _buildLoadingIndicator(theme);
-        }
-
-        return ListView.builder(
-          controller: _scrollController,
-          padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 80.0),
-          itemCount: hasReachedMax ? deliveries.length : deliveries.length + 1,
-          itemBuilder: (context, index) {
-            if (index >= deliveries.length) {
-              if (isLoadingMore) {
-                return const Center(
-                    child: Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: CircularProgressIndicator()));
-              } else if (state is CurrentDeliveriesNextPageError) {
-                return Center(
-                    child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          children: [
-                            Text(
-                                'Error loading more: ${state.failure.message}'),
-                            ElevatedButton(
-                                onPressed: () {
-                                  if (_driverId != null) {
-                                    _currentDeliveriesBloc.add(
-                                        LoadMoreCurrentDeliveries(
-                                            driverId: _driverId!));
-                                  }
-                                },
-                                child: const Text("Retry"))
-                          ],
-                        )));
-              }
-              return const SizedBox.shrink();
-            }
-            return _buildDeliveryCard(deliveries[index], theme);
-          },
         );
       },
     );
@@ -924,7 +553,16 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
         appBar: _buildAppBar(context, theme),
         body: SafeArea(
           top: true,
-          child: _buildBody(context, theme),
+          child: _deliveries.isEmpty
+              ? _buildEmptyState(theme)
+              : ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 80.0),
+                  itemCount: _deliveries.length,
+                  itemBuilder: (context, index) {
+                    return _buildDeliveryCard(_deliveries[index], theme);
+                  },
+                ),
         ),
       ),
     );
@@ -945,52 +583,34 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
   }
 
   Widget _buildDeliveryCard(Delivery delivery, FlutterFlowTheme theme) {
-    bool isRide = delivery.deliveryType == 'RIDE';
-
-    return FutureBuilder<double>(
-      future: _currentPosition != null
-          ? _geolocationService.calculateDistance(
-              _currentPosition!.latitude,
-              _currentPosition!.longitude,
-              delivery.pickupLatitude,
-              delivery.pickupLongitude)
-          : Future.value(0.0),
-      builder: (context, snapshot) {
-        String distanceToPickupKm = snapshot.hasData
-            ? (snapshot.data! / 1000).toStringAsFixed(1)
-            : "...";
-
-        return Card(
-          margin: const EdgeInsets.only(bottom: 16.0),
-          elevation: 2,
-          clipBehavior: Clip.antiAliasWithSaveLayer,
-          color: theme.secondaryBackground,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.max,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildCardHeader(delivery, theme),
-                const SizedBox(height: 12),
-                _buildCardInfoRow(delivery, distanceToPickupKm, theme),
-                if (delivery.deliveryInstructions != null &&
-                    delivery.deliveryInstructions!.isNotEmpty)
-                  _buildSpecialInstructions(delivery, theme),
-                Divider(height: 24, thickness: 1, color: theme.alternate),
-                _buildLocationSection(delivery, theme),
-                _buildClientInfo(delivery, theme, isRide: isRide),
-                if (!isRide) const SizedBox(height: 16),
-                if (!isRide) _buildParcelInfo(delivery, theme),
-                const SizedBox(height: 16),
-                _buildActionButtons(delivery, theme),
-              ],
-            ),
-          ),
-        );
-      },
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16.0),
+      elevation: 2,
+      clipBehavior: Clip.antiAliasWithSaveLayer,
+      color: theme.secondaryBackground,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.max,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildCardHeader(delivery, theme),
+            const SizedBox(height: 12),
+            _buildCardInfoRow(delivery, "5.2", theme),
+            if (delivery.deliveryInstructions != null &&
+                delivery.deliveryInstructions!.isNotEmpty)
+              _buildSpecialInstructions(delivery, theme),
+            Divider(height: 24, thickness: 1, color: theme.alternate),
+            _buildLocationSection(delivery, theme),
+            _buildClientInfo(delivery, theme),
+            const SizedBox(height: 16),
+            _buildParcelInfo(delivery, theme),
+            const SizedBox(height: 16),
+            _buildActionButtons(delivery, theme),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1030,8 +650,6 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
 
   Widget _buildCardInfoRow(
       Delivery delivery, String distanceToPickupKm, FlutterFlowTheme theme) {
-    bool isRide = delivery.deliveryType == 'RIDE';
-
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1048,11 +666,6 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
                 _infoRow(Icons.social_distance_sharp, '$distanceToPickupKm km',
                     theme,
                     title: "To Pickup: "),
-              if (isRide) const SizedBox(height: 4),
-              if (isRide)
-                _infoRow(Icons.airline_seat_recline_normal,
-                    '${delivery.numberOfSeats} Seats', theme,
-                    title: "Seats: "),
             ],
           ),
         ),
@@ -1189,8 +802,7 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
     );
   }
 
-  Widget _buildClientInfo(Delivery delivery, FlutterFlowTheme theme,
-      {bool isRide = false}) {
+  Widget _buildClientInfo(Delivery delivery, FlutterFlowTheme theme) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -1205,7 +817,7 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
               Icon(Icons.person_pin_circle_outlined,
                   size: 18, color: theme.primary),
               const SizedBox(width: 8),
-              Text(isRide ? "Rider Contact" : "Delivery Contact",
+              Text("Delivery Contact",
                   style: theme.titleSmall.override(
                       fontFamily: theme.titleSmallFamily,
                       fontWeight: FontWeight.w600,
@@ -1256,10 +868,9 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
         children: [
           Row(
             children: [
-              const Icon(Icons.inventory_2_outlined,
-                  size: 18, color: Colors.black),
+              const Icon(Icons.opacity, size: 18, color: Colors.black),
               const SizedBox(width: 8),
-              Text("Parcel Details",
+              Text("Water Delivery Details",
                   style: theme.titleSmall.override(
                       fontFamily: theme.titleSmallFamily,
                       fontWeight: FontWeight.w600,
@@ -1275,7 +886,6 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
   }
 
   Widget _buildActionButtons(Delivery delivery, FlutterFlowTheme theme) {
-    bool isRide = delivery.deliveryType == 'RIDE';
     bool isAssigned = delivery.deliveryStatus == DeliveryStatus.ASSIGNED;
     bool isPickedUp = delivery.deliveryStatus == DeliveryStatus.PICKED_UP;
 
@@ -1336,12 +946,10 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
       topRowButtons.add(chatButton);
 
       mainAction = ElevatedButton.icon(
-        icon: Icon(
-            isRide ? Icons.directions_car_outlined : Icons.inventory_outlined,
-            size: 18,
-            color: Colors.white),
-        label: Text(isRide ? 'START RIDE' : 'CONFIRM PICKUP',
-            style: const TextStyle(
+        icon:
+            Icon(Icons.local_shipping_outlined, size: 18, color: Colors.white),
+        label: const Text('CONFIRM PICKUP',
+            style: TextStyle(
                 color: Colors.white,
                 fontFamily: 'Poppins',
                 fontWeight: FontWeight.w600,
@@ -1352,9 +960,7 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
             minimumSize: const Size(double.infinity, 48),
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-        onPressed: () => isRide
-            ? _startPickupAndTracking(delivery)
-            : _showPickupBottomSheet(delivery),
+        onPressed: () => _showPickupBottomSheet(delivery),
       );
     } else if (isPickedUp) {
       topRowButtons.add(
@@ -1385,8 +991,8 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
       mainAction = ElevatedButton.icon(
         icon: const Icon(Icons.check_circle_outline,
             size: 18, color: Colors.white),
-        label: Text(isRide ? 'END RIDE' : 'CONFIRM COMPLETION',
-            style: const TextStyle(
+        label: const Text('CONFIRM COMPLETION',
+            style: TextStyle(
                 color: Colors.white,
                 fontFamily: 'Poppins',
                 fontWeight: FontWeight.w600,
@@ -1397,8 +1003,7 @@ class _CurrentDeliveriesWidgetState extends State<CurrentDeliveriesWidget>
             minimumSize: const Size(double.infinity, 48),
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-        onPressed: () =>
-            _showCompleteDeliveryBottomSheet(delivery, isRide: isRide),
+        onPressed: () => _showCompleteDeliveryBottomSheet(delivery),
       );
     }
 

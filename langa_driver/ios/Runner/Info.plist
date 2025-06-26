@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Langa's Driver</string>
+	<string>Langas Driver</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -29,11 +29,11 @@
 	<key>NSCameraUsageDescription</key>
 	<string>This app requires camera access to take pictures of verification documents.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Langa's Driver needs your location to track active deliveries for customers even when the app is in the background. This ensures accurate route information and service.</string>
+	<string>Langas Driver needs your location to track active deliveries for customers even when the app is in the background. This ensures accurate route information and service.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
-	<string>Langa's Driver needs your location to track active deliveries even when the app is in the background.</string>
+	<string>Langas Driver needs your location to track active deliveries even when the app is in the background.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Langa's Driver needs your location to show nearby deliveries and track active deliveries while you are using the app.</string>
+	<string>Langas Driver needs your location to show nearby deliveries and track active deliveries while you are using the app.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>

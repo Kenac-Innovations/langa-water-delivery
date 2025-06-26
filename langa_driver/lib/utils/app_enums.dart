@@ -19,7 +19,7 @@ enum TransactionType {
 }
 
 enum WalletOwnerType {
-  Langa's_SYSTEM,
+  Langas_SYSTEM,
   ORGANIZATION,
   DRIVER,
   UNKNOWN;

@@ -19,7 +19,7 @@
 
     <application
         android:name="${applicationName}"
-        android:label="Langa's Driver"
+        android:label="Langas Driver"
         android:icon="@mipmap/ic_launcher">
 
         <!-- Google Maps API Key -->

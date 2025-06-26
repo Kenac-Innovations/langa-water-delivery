@@ -1,8 +1,5 @@
-// ignore_for_file: overridden_fields, annotate_overrides
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
 import 'package:shared_preferences/shared_preferences.dart';
 
 const kThemeModeKey = '__theme_mode__';
@@ -53,10 +50,16 @@ abstract class FlutterFlowTheme {
   late Color warning;
   late Color error;
   late Color info;
-  late Color dropdown;
-  late Color logintext;
-  late Color edittext;
+
+  late Color customColor1;
+  late Color customColor2;
+  late Color homebottomtext;
+  late Color homebuttontext;
+  late Color editProfiletext;
   late Color editProfileSmalltext;
+  late Color pickUptext;
+  late Color pickupBackground;
+  late Color logintext;
 
   @Deprecated('Use displaySmallFamily instead')
   String get title1Family => displaySmallFamily;
@@ -129,43 +132,32 @@ class LightModeTheme extends FlutterFlowTheme {
   @Deprecated('Use tertiary instead')
   Color get tertiaryColor => tertiary;
 
-  late Color primary = const Color(0xFF008001);
-  late Color secondary =
-      const Color(0xFF39D2C0); // Aqua-like secondary color for contrast
-  late Color tertiary =
-      const Color(0xFFEE8B60); // A warm orange color, works well with deep red
-  late Color alternate = const Color(
-      0xFFD3D3D3); // A softer grey alternative to balance the red tones
-  late Color primaryText =
-      const Color(0xFF14181B); // Dark text to maintain readability
-  late Color secondaryText =
-      const Color(0xFF57636C); // Muted greyish-blue for secondary text
-  late Color primaryBackground =
-      const Color(0xFFF1F4F8); // Light background to keep the interface clean
-  late Color secondaryBackground =
-      const Color(0xFFFFFFFF); // White background for cards or modal sections
-  late Color accent1 = const Color(0x4CA11D33); // Semi-transparent red accent
-  late Color accent2 =
-      const Color(0x4D39D2C0); // Semi-transparent secondary color accent
-  late Color accent3 =
-      const Color(0x4DEE8B60); // Semi-transparent tertiary accent
-  late Color accent4 = const Color(
-      0xCCFFFFFF); // Semi-transparent white accent, good for soft overlays
-  late Color success = const Color(0xFF249689); // Teal success color
-  late Color warning =
-      const Color(0xFFF9CF58); // A yellowish tone for warning messages
-  late Color error = const Color(
-      0xFFFF5963); // Red error color that contrasts the primary color
-  late Color info = const Color(
-      0xFF39D2C0); // Use the secondary color for informational elements
-  late Color dropdown =
-      const Color(0xFFF1F4F8); // Light background for dropdowns
-  late Color logintext =
-      const Color(0xFF333333); // Dark text for login sections
-  late Color edittext =
-      const Color(0xFF666666); // Slightly muted grey text for editable fields
-  late Color editProfileSmalltext =
-      const Color(0xFF666666); // Same muted grey for small profile text
+  late Color primary = const Color(0xFF001A7A);
+  late Color secondary = const Color(0xFF39D2C0);
+  late Color tertiary = const Color(0xFFEE8B60);
+  late Color alternate = const Color(0xFFE0E3E7);
+  late Color primaryText = const Color(0xFF14181B);
+  late Color secondaryText = const Color(0xFF57636C);
+  late Color primaryBackground = const Color(0xFFF1F4F8);
+  late Color secondaryBackground = const Color(0xFFFFFFFF);
+  late Color accent1 = const Color(0x4C4B39EF);
+  late Color accent2 = const Color(0x4D39D2C0);
+  late Color accent3 = const Color(0x4DEE8B60);
+  late Color accent4 = const Color(0xCCFFFFFF);
+  late Color success = const Color(0xFF249689);
+  late Color warning = const Color(0xFFF9CF58);
+  late Color error = const Color(0xFFFF5963);
+  late Color info = const Color(0xFFFFFFFF);
+  late Color pickupBackground = const Color(0xFFFFFFFF);
+
+  late Color customColor1 = const Color(0xFF60D836);
+  late Color customColor2 = const Color(0xFF6267B7);
+  late Color homebottomtext = const Color(0xff282828);
+  late Color homebuttontext = const Color(0xFFFB0102);
+  late Color editProfiletext = const Color(0xFF666666);
+  late Color editProfileSmalltext = const Color(0xFF666666);
+  late Color pickUptext = const Color(0xFFFB0102);
+  late Color logintext = const Color(0xFF333333);
 }
 
 abstract class Typography {
@@ -207,106 +199,91 @@ class ThemeTypography extends Typography {
   final FlutterFlowTheme theme;
 
   String get displayLargeFamily => 'Outfit';
-  TextStyle get displayLarge => GoogleFonts.getFont(
-        'Outfit',
+  TextStyle get displayLarge => GoogleFonts.outfit(
         color: theme.primaryText,
         fontWeight: FontWeight.normal,
         fontSize: 64.0,
       );
   String get displayMediumFamily => 'Outfit';
-  TextStyle get displayMedium => GoogleFonts.getFont(
-        'Outfit',
+  TextStyle get displayMedium => GoogleFonts.outfit(
         color: theme.primaryText,
         fontWeight: FontWeight.normal,
         fontSize: 44.0,
       );
   String get displaySmallFamily => 'Outfit';
-  TextStyle get displaySmall => GoogleFonts.getFont(
-        'Outfit',
+  TextStyle get displaySmall => GoogleFonts.outfit(
         color: theme.primaryText,
         fontWeight: FontWeight.w600,
         fontSize: 36.0,
       );
   String get headlineLargeFamily => 'Outfit';
-  TextStyle get headlineLarge => GoogleFonts.getFont(
-        'Outfit',
+  TextStyle get headlineLarge => GoogleFonts.outfit(
         color: theme.primaryText,
         fontWeight: FontWeight.w600,
         fontSize: 32.0,
       );
   String get headlineMediumFamily => 'Outfit';
-  TextStyle get headlineMedium => GoogleFonts.getFont(
-        'Outfit',
+  TextStyle get headlineMedium => GoogleFonts.outfit(
         color: theme.primaryText,
         fontWeight: FontWeight.normal,
         fontSize: 24.0,
       );
   String get headlineSmallFamily => 'Outfit';
-  TextStyle get headlineSmall => GoogleFonts.getFont(
-        'Outfit',
+  TextStyle get headlineSmall => GoogleFonts.outfit(
         color: theme.primaryText,
         fontWeight: FontWeight.w500,
         fontSize: 24.0,
       );
   String get titleLargeFamily => 'Outfit';
-  TextStyle get titleLarge => GoogleFonts.getFont(
-        'Outfit',
+  TextStyle get titleLarge => GoogleFonts.outfit(
         color: theme.primaryText,
         fontWeight: FontWeight.w500,
         fontSize: 22.0,
       );
   String get titleMediumFamily => 'Readex Pro';
-  TextStyle get titleMedium => GoogleFonts.getFont(
-        'Readex Pro',
-        color: const Color(0xFF0A1C40),
+  TextStyle get titleMedium => GoogleFonts.readexPro(
+        color: theme.primaryText,
         fontWeight: FontWeight.normal,
         fontSize: 18.0,
       );
   String get titleSmallFamily => 'Readex Pro';
-  TextStyle get titleSmall => GoogleFonts.getFont(
-        'Readex Pro',
+  TextStyle get titleSmall => GoogleFonts.readexPro(
         color: theme.info,
         fontWeight: FontWeight.w500,
         fontSize: 16.0,
       );
   String get labelLargeFamily => 'Readex Pro';
-  TextStyle get labelLarge => GoogleFonts.getFont(
-        'Readex Pro',
+  TextStyle get labelLarge => GoogleFonts.readexPro(
         color: theme.secondaryText,
         fontWeight: FontWeight.normal,
         fontSize: 16.0,
       );
   String get labelMediumFamily => 'Readex Pro';
-  TextStyle get labelMedium => GoogleFonts.getFont(
-        'Readex Pro',
+  TextStyle get labelMedium => GoogleFonts.readexPro(
         color: theme.secondaryText,
         fontWeight: FontWeight.normal,
         fontSize: 14.0,
       );
   String get labelSmallFamily => 'Readex Pro';
-  TextStyle get labelSmall => GoogleFonts.getFont(
-        'Readex Pro',
+  TextStyle get labelSmall => GoogleFonts.readexPro(
         color: theme.secondaryText,
         fontWeight: FontWeight.normal,
         fontSize: 12.0,
       );
   String get bodyLargeFamily => 'Readex Pro';
-  TextStyle get bodyLarge => GoogleFonts.getFont(
-        'Readex Pro',
+  TextStyle get bodyLarge => GoogleFonts.readexPro(
         color: theme.primaryText,
         fontWeight: FontWeight.normal,
         fontSize: 16.0,
       );
   String get bodyMediumFamily => 'Readex Pro';
-  TextStyle get bodyMedium => GoogleFonts.getFont(
-        'Readex Pro',
+  TextStyle get bodyMedium => GoogleFonts.readexPro(
         color: theme.primaryText,
         fontWeight: FontWeight.normal,
         fontSize: 14.0,
       );
   String get bodySmallFamily => 'Readex Pro';
-  TextStyle get bodySmall => GoogleFonts.getFont(
-        'Readex Pro',
+  TextStyle get bodySmall => GoogleFonts.readexPro(
         color: theme.primaryText,
         fontWeight: FontWeight.normal,
         fontSize: 12.0,
@@ -321,7 +298,7 @@ class DarkModeTheme extends FlutterFlowTheme {
   @Deprecated('Use tertiary instead')
   Color get tertiaryColor => tertiary;
 
-  late Color primary = const Color(0xFF008001);
+  late Color primary = const Color(0xFF001A7A);
   late Color secondary = const Color(0xFF39D2C0);
   late Color tertiary = const Color(0xFFEE8B60);
   late Color alternate = const Color(0xFF262D34);
@@ -337,10 +314,16 @@ class DarkModeTheme extends FlutterFlowTheme {
   late Color warning = const Color(0xFFF9CF58);
   late Color error = const Color(0xFFFF5963);
   late Color info = const Color(0xFFFFFFFF);
-  late Color dropdown = const Color(0xFFFFFFFF);
-  late Color logintext = const Color(0xFFFFFFFF);
-  late Color edittext = const Color(0xFFFFFFFF);
+  late Color pickupBackground = const Color(0xff282828);
+
+  late Color customColor1 = const Color(0xFF60D836);
+  late Color customColor2 = const Color(0xFF6267B7);
+  late Color homebottomtext = const Color(0xffFFFFFF);
+  late Color homebuttontext = const Color(0xff282828);
+  late Color editProfiletext = const Color(0xFFFFFFFF);
   late Color editProfileSmalltext = const Color(0xFFFFFFFF);
+  late Color pickUptext = const Color(0xFFFFFFFF);
+  late Color logintext = const Color(0xFFFFFFFF);
 }
 
 extension TextStyleHelper on TextStyle {
@@ -354,26 +337,80 @@ extension TextStyleHelper on TextStyle {
     bool useGoogleFonts = true,
     TextDecoration? decoration,
     double? lineHeight,
-  }) =>
-      useGoogleFonts
-          ? GoogleFonts.getFont(
-              fontFamily!,
-              color: color ?? this.color,
-              fontSize: fontSize ?? this.fontSize,
-              letterSpacing: letterSpacing ?? this.letterSpacing,
-              fontWeight: fontWeight ?? this.fontWeight,
-              fontStyle: fontStyle ?? this.fontStyle,
-              decoration: decoration,
-              height: lineHeight,
-            )
-          : copyWith(
-              fontFamily: fontFamily,
-              color: color,
-              fontSize: fontSize,
-              letterSpacing: letterSpacing,
-              fontWeight: fontWeight,
-              fontStyle: fontStyle,
-              decoration: decoration,
-              height: lineHeight,
-            );
+  }) {
+    final effectiveFontFamily = fontFamily ?? this.fontFamily;
+    if (!useGoogleFonts || effectiveFontFamily == null) {
+      return copyWith(
+        fontFamily: effectiveFontFamily,
+        color: color,
+        fontSize: fontSize,
+        letterSpacing: letterSpacing,
+        fontWeight: fontWeight,
+        fontStyle: fontStyle,
+        decoration: decoration,
+        height: lineHeight,
+      );
+    }
+
+    switch (effectiveFontFamily) {
+      case 'Readex Pro':
+        return GoogleFonts.readexPro(
+          color: color ?? this.color,
+          fontSize: fontSize ?? this.fontSize,
+          letterSpacing: letterSpacing ?? this.letterSpacing,
+          fontWeight: fontWeight ?? this.fontWeight,
+          fontStyle: fontStyle ?? this.fontStyle,
+          decoration: decoration,
+          height: lineHeight,
+        );
+      case 'Outfit':
+        return GoogleFonts.outfit(
+          color: color ?? this.color,
+          fontSize: fontSize ?? this.fontSize,
+          letterSpacing: letterSpacing ?? this.letterSpacing,
+          fontWeight: fontWeight ?? this.fontWeight,
+          fontStyle: fontStyle ?? this.fontStyle,
+          decoration: decoration,
+          height: lineHeight,
+        );
+      case 'Poppins':
+        return GoogleFonts.poppins(
+          color: color ?? this.color,
+          fontSize: fontSize ?? this.fontSize,
+          letterSpacing: letterSpacing ?? this.letterSpacing,
+          fontWeight: fontWeight ?? this.fontWeight,
+          fontStyle: fontStyle ?? this.fontStyle,
+          decoration: decoration,
+          height: lineHeight,
+        );
+      case 'Aoboshi One':
+        return GoogleFonts.aoboshiOne(
+          color: color ?? this.color,
+          fontSize: fontSize ?? this.fontSize,
+          letterSpacing: letterSpacing ?? this.letterSpacing,
+          fontWeight: fontWeight ?? this.fontWeight,
+          fontStyle: fontStyle ?? this.fontStyle,
+          decoration: decoration,
+          height: lineHeight,
+        );
+      default:
+        // This is a robust fallback.
+        // It handles cases where the font name might have a suffix like "_regular".
+        try {
+          return GoogleFonts.getFont(
+            effectiveFontFamily.split('_').first,
+            color: color ?? this.color,
+            fontSize: fontSize ?? this.fontSize,
+            letterSpacing: letterSpacing ?? this.letterSpacing,
+            fontWeight: fontWeight ?? this.fontWeight,
+            fontStyle: fontStyle ?? this.fontStyle,
+            decoration: decoration,
+            height: lineHeight,
+          );
+        } catch (e) {
+          // If all else fails, return the original style to prevent a crash.
+          return this;
+        }
+    }
+  }
 }

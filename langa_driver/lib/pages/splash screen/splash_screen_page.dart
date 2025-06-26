@@ -1,11 +1,9 @@
+import 'dart:async';
 import 'package:flutter/services.dart';
-import 'package:langas_driver/bloc/auth/auth_bloc/auth_bloc_bloc.dart';
-import 'package:langas_driver/bloc/auth/auth_bloc/auth_bloc_state.dart';
 import 'package:langas_driver/flutter_flow/flutter_flow_animation.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:langas_driver/nav/nav.dart';
 
 class SplashScreenWidget extends StatefulWidget {
@@ -37,6 +35,12 @@ class _SplashScreenWidgetState extends State<SplashScreenWidget>
   @override
   void initState() {
     super.initState();
+    // Navigate to the login page after a delay
+    Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        context.go('/loginPage');
+      }
+    });
   }
 
   @override
@@ -50,49 +54,40 @@ class _SplashScreenWidgetState extends State<SplashScreenWidget>
       );
     }
 
-    return BlocListener<AuthBloc, AuthState>(
-      listener: (context, state) {
-        if (state is AuthDriverAuthenticated) {
-          context.go('/homePage');
-        } else if (state is AuthUnauthenticated) {
-          context.go('/loginPage');
-        }
-      },
-      child: Scaffold(
-        key: scaffoldKey,
-        backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
-        body: SafeArea(
-          top: true,
-          child: Container(
-            height: double.infinity,
-            width: double.infinity,
-            decoration: const BoxDecoration(),
-            child: Row(
-              mainAxisSize: MainAxisSize.max,
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8.0),
-                  child: Image.asset(
-                    'assets/images/logo2.png',
-                    width: 140.0,
-                    height: 120.0,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        width: 140.0,
-                        height: 120.0,
-                        color: Colors.grey.shade300,
-                        child: const Icon(Icons.image_not_supported,
-                            size: 50, color: Colors.grey),
-                      );
-                    },
-                  ),
+    return Scaffold(
+      key: scaffoldKey,
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
+      body: SafeArea(
+        top: true,
+        child: Container(
+          height: double.infinity,
+          width: double.infinity,
+          decoration: const BoxDecoration(),
+          child: Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8.0),
+                child: Image.asset(
+                  'assets/images/logo2.png',
+                  width: 140.0,
+                  height: 120.0,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      width: 140.0,
+                      height: 120.0,
+                      color: Colors.grey.shade300,
+                      child: const Icon(Icons.image_not_supported,
+                          size: 50, color: Colors.grey),
+                    );
+                  },
                 ),
-              ],
-            ).animateOnPageLoad(animationsMap['rowOnPageLoadAnimation']!),
-          ),
+              ),
+            ],
+          ).animateOnPageLoad(animationsMap['rowOnPageLoadAnimation']!),
         ),
       ),
     );

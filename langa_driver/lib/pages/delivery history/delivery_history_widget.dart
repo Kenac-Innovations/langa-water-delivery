@@ -1,16 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_rating_bar/flutter_rating_bar.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:intl/intl.dart';
-import 'package:langas_driver/bloc/auth/auth_bloc/auth_bloc_bloc.dart';
-import 'package:langas_driver/bloc/auth/auth_bloc/auth_bloc_state.dart';
-import 'package:langas_driver/bloc/delivery/delivery_history_bloc/delivery_history_bloc_bloc.dart';
-import 'package:langas_driver/bloc/delivery/delivery_history_bloc/delivery_history_bloc_event.dart';
-import 'package:langas_driver/bloc/delivery/delivery_history_bloc/delivery_history_bloc_state.dart';
 import 'package:langas_driver/flutter_flow/flutter_flow_icon_button.dart';
 import 'package:langas_driver/flutter_flow/flutter_flow_theme.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:langas_driver/models/delivery_models.dart';
 import 'package:langas_driver/nav/nav.dart';
 import 'package:langas_driver/utils/delivery_enums.dart';
@@ -25,54 +17,82 @@ class DeliveryHistoryWidget extends StatefulWidget {
 class _DeliveryHistoryWidgetState extends State<DeliveryHistoryWidget> {
   final scaffoldKey = GlobalKey<ScaffoldState>();
   final unfocusNode = FocusNode();
-  final ScrollController _scrollController = ScrollController();
-  String? _driverId;
+
+  final List<Delivery> _deliveryHistory = [
+    Delivery(
+      deliverId: 201,
+      priceAmount: 18.00,
+      currency: 'USD',
+      sensitivity: Sensitivity.BASIC,
+      paymentStatus: PaymentStatus.PAID,
+      pickupLatitude: -17.8252,
+      pickupLongitude: 31.0335,
+      pickupLocation: 'Main Water Depot, Harare',
+      pickupContactName: 'Aqua Pure',
+      pickupContactPhone: '0777111222',
+      dropOffLatitude: -17.8452,
+      dropOffLongitude: 31.0535,
+      dropOffLocation: '88 Masasa Ave, Eastlea',
+      dropOffContactName: 'Tariro Moyo',
+      dropOffContactPhone: '0777333444',
+      parcelDescription: '15 x 5L Purified Water',
+      vehicleType: VehicleType.TRUCK,
+      paymentMethod: PaymentMethod.E_MONEY,
+      packageWeight: 75,
+      deliveryStatus: DeliveryStatus.COMPLETED,
+      isProposed: false,
+      commissionRequired: 1.80,
+      numberOfSeats: 0,
+      deliveryType: 'WATER',
+      isScheduled: false,
+      customer: const Customer(
+        clientId: 3,
+        firstname: 'Tariro',
+        lastname: 'Moyo',
+        mobileNumber: '0777333444',
+        emailAddress: 'tariro.m@example.com',
+      ),
+    ),
+    Delivery(
+      deliverId: 202,
+      priceAmount: 12.50,
+      currency: 'USD',
+      sensitivity: Sensitivity.BASIC,
+      paymentStatus: PaymentStatus.PAID,
+      pickupLatitude: -17.8252,
+      pickupLongitude: 31.0335,
+      pickupLocation: 'Main Water Depot, Harare',
+      pickupContactName: 'Aqua Pure',
+      pickupContactPhone: '0777111222',
+      dropOffLatitude: -17.8052,
+      dropOffLongitude: 31.0135,
+      dropOffLocation: '15 Ridge Road, Avondale West',
+      dropOffContactName: 'Ben Banda',
+      dropOffContactPhone: '0712555666',
+      parcelDescription: '10 x 5L Purified Water',
+      vehicleType: VehicleType.VAN,
+      paymentMethod: PaymentMethod.CASH,
+      packageWeight: 50,
+      deliveryStatus: DeliveryStatus.CANCELLED,
+      isProposed: false,
+      commissionRequired: 1.25,
+      numberOfSeats: 0,
+      deliveryType: 'WATER',
+      isScheduled: false,
+      customer: const Customer(
+        clientId: 4,
+        firstname: 'Ben',
+        lastname: 'Banda',
+        mobileNumber: '0712555666',
+        emailAddress: 'ben.b@example.com',
+      ),
+    ),
+  ];
 
   @override
-  void initState() {
-    super.initState();
-    _scrollController.addListener(_onScroll);
-    _loadInitialHistory();
-  }
-
-  void _loadInitialHistory() {
-    final authState = context.read<AuthBloc>().state;
-    if (authState is AuthDriverAuthenticated) {
-      _driverId = authState.authData.driverProfile?.id.toString();
-      if (_driverId != null && _driverId!.isNotEmpty) {
-        context.read<DeliveryHistoryBloc>().add(LoadDeliveryHistory(
-              driverId: _driverId!,
-              statuses: const [
-                DeliveryStatus.COMPLETED,
-                DeliveryStatus.CANCELLED
-              ],
-              isRefresh: true,
-            ));
-      } else {
-        _showError('Driver ID not available.');
-      }
-    } else {
-      _showError('User not authenticated.');
-    }
-  }
-
-  void _onScroll() {
-    if (_isBottom) {
-      final currentState = context.read<DeliveryHistoryBloc>().state;
-      if (currentState is DeliveryHistoryLoadSuccess &&
-          !currentState.hasReachedMax &&
-          _driverId != null) {
-        context.read<DeliveryHistoryBloc>().add(LoadMoreDeliveryHistory(
-            driverId: _driverId!, statuses: currentState.currentStatuses));
-      }
-    }
-  }
-
-  bool get _isBottom {
-    if (!_scrollController.hasClients) return false;
-    final maxScroll = _scrollController.position.maxScrollExtent;
-    final currentScroll = _scrollController.offset;
-    return currentScroll >= (maxScroll * 0.9);
+  void dispose() {
+    unfocusNode.dispose();
+    super.dispose();
   }
 
   Color _getStatusColor(BuildContext context, DeliveryStatus status) {
@@ -85,36 +105,6 @@ class _DeliveryHistoryWidgetState extends State<DeliveryHistoryWidget> {
       default:
         return theme.secondaryText;
     }
-  }
-
-  String _getVehicleImage(VehicleType? vehicleType) {
-    switch (vehicleType) {
-      case VehicleType.BIKE:
-        return 'assets/images/bike_latest.png';
-      case VehicleType.CAR:
-        return 'assets/images/car_latest.png';
-      case VehicleType.TRUCK:
-        return 'assets/images/truck_latest.png';
-      case VehicleType.VAN:
-        return 'assets/images/van_latest.png';
-      default:
-        return 'assets/images/van_latest.png';
-    }
-  }
-
-  void _showError(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
-    );
-  }
-
-  @override
-  void dispose() {
-    unfocusNode.dispose();
-    _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
-    super.dispose();
   }
 
   @override
@@ -141,7 +131,7 @@ class _DeliveryHistoryWidgetState extends State<DeliveryHistoryWidget> {
             onPressed: () async => context.pop(),
           ),
           title: Text(
-            "Delivery History",
+            "Water Delivery History",
             style: theme.headlineMedium.override(
               fontFamily: theme.headlineMediumFamily,
               color: Colors.white,
@@ -155,88 +145,23 @@ class _DeliveryHistoryWidgetState extends State<DeliveryHistoryWidget> {
         body: SafeArea(
           top: true,
           child: Padding(
-              padding:
-                  const EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
-              child: BlocConsumer<DeliveryHistoryBloc, DeliveryHistoryState>(
-                listener: (context, state) {
-                  if (state is DeliveryHistoryLoadFailure) {
-                    _showError(
-                        'Failed to load history: ${state.failure.message}');
-                  } else if (state is DeliveryHistoryNextPageError) {
-                    _showError(
-                        'Failed to load more history: ${state.failure.message}');
-                  }
-                },
-                builder: (context, state) {
-                  if (state is DeliveryHistoryLoading &&
-                      state is! DeliveryHistoryLoadingNextPage) {
-                    return Center(
-                        child: SpinKitSpinningLines(
-                            size: 60.0, color: theme.primary, lineWidth: 3.0));
-                  }
-                  if (state is DeliveryHistoryLoadFailure) {
-                    return Center(
-                        child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text('Error: ${state.failure.message}'),
-                        const SizedBox(height: 10),
-                        ElevatedButton(
-                            onPressed: _loadInitialHistory,
-                            child: const Text('Retry'))
-                      ],
-                    ));
-                  }
-                  if (state is DeliveryHistoryLoadSuccess) {
-                    if (state.deliveries.isEmpty) {
-                      return Center(
-                          child: Text("NO DELIVERY HISTORY",
-                              style: theme.titleMedium));
-                    }
-                    return ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.only(top: 16.0, bottom: 16.0),
-                      itemCount: state.hasReachedMax
-                          ? state.deliveries.length
-                          : state.deliveries.length + 1,
-                      itemBuilder: (context, index) {
-                        if (index >= state.deliveries.length) {
-                          if (state is DeliveryHistoryLoadingNextPage) {
-                            return const Center(
-                                child: Padding(
-                                    padding: EdgeInsets.all(16.0),
-                                    child: CircularProgressIndicator()));
-                          } else if (state is DeliveryHistoryNextPageError) {
-                            return Center(
-                                child: Padding(
-                                    padding: const EdgeInsets.all(16.0),
-                                    child: Text(
-                                        'Error loading more: ${state.failure.message}')));
-                          } else {
-                            if (!state.hasReachedMax && _driverId != null) {
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                if (mounted) {
-                                  context.read<DeliveryHistoryBloc>().add(
-                                      LoadMoreDeliveryHistory(
-                                          driverId: _driverId!,
-                                          statuses: state.currentStatuses));
-                                }
-                              });
-                            }
-                            return const SizedBox.shrink();
-                          }
-                        }
-                        final delivery = state.deliveries[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 16.0),
-                          child: _buildDeliveryCard(context, theme, delivery),
-                        );
-                      },
-                    );
-                  }
-                  return const Center(child: Text("Loading history..."));
-                },
-              )),
+            padding: const EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
+            child: _deliveryHistory.isEmpty
+                ? Center(
+                    child:
+                        Text("NO DELIVERY HISTORY", style: theme.titleMedium))
+                : ListView.builder(
+                    padding: const EdgeInsets.only(top: 16.0, bottom: 16.0),
+                    itemCount: _deliveryHistory.length,
+                    itemBuilder: (context, index) {
+                      final delivery = _deliveryHistory[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: _buildDeliveryCard(context, theme, delivery),
+                      );
+                    },
+                  ),
+          ),
         ),
       ),
     );
@@ -245,12 +170,9 @@ class _DeliveryHistoryWidgetState extends State<DeliveryHistoryWidget> {
   Widget _buildDeliveryCard(
       BuildContext context, FlutterFlowTheme theme, Delivery delivery) {
     String formattedDate = "Date unavailable";
-    final dateString =
-        delivery.currency; // Assuming date is in currency field temporarily
-    final parsedDate = DateTime.tryParse(dateString);
-    if (parsedDate != null) {
-      formattedDate = DateFormat('yyyy-MM-dd HH:mm').format(parsedDate);
-    }
+    // Using a static date for demonstration as it's not in the provided model
+    formattedDate = DateFormat('yyyy-MM-dd HH:mm').format(
+        DateTime.now().subtract(Duration(days: delivery.deliverId - 200)));
 
     return Card(
       clipBehavior: Clip.antiAliasWithSaveLayer,

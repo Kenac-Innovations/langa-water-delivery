@@ -10,10 +10,10 @@ import 'package:flutter_background_service_android/flutter_background_service_an
 
 const String notificationChannelId = 'langas_driver_location_channel';
 const int notificationId = 888;
-const String initialNotificationTitle = 'Langa's Driver Active';
+const String initialNotificationTitle = 'Langas Driver Active';
 const String initialNotificationContent =
     'Location tracking is initializing...';
-const String trackingNotificationTitle = 'Langa's Driver - On Duty';
+const String trackingNotificationTitle = 'Langas Driver - On Duty';
 const String trackingNotificationContent =
     'Your location is being shared for active delivery.';
 

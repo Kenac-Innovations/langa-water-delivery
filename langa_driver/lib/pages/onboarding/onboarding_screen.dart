@@ -93,7 +93,7 @@ class OnboardingScreen extends StatelessWidget {
 
               // Title
               const Text(
-                "Langa's Driver",
+                "Langas Driver",
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 28,
@@ -119,7 +119,7 @@ class OnboardingScreen extends StatelessWidget {
 
               // Description
               const Text(
-                "Welcome to Langa's Driver! Access trusted driving opportunities for flexible earnings with a hassle-free experience.",
+                "Welcome to Langas Driver! Access trusted driving opportunities for flexible earnings with a hassle-free experience.",
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 14,

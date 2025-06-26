@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:intl_phone_field/phone_number.dart' as intl_phone;
-import 'package:langas_driver/bloc/auth/password_reset_bloc/password_reset_bloc_bloc.dart';
-import 'package:langas_driver/bloc/auth/password_reset_bloc/password_reset_bloc_event.dart';
-import 'package:langas_driver/bloc/auth/password_reset_bloc/password_reset_bloc_state.dart';
 import 'package:langas_driver/flutter_flow/flutter_flow_theme.dart';
 import 'package:langas_driver/nav/nav.dart';
 
@@ -36,9 +32,11 @@ class _ForgotPasswordWidgetState extends State<ForgotPasswordWidget>
         _phoneController.clear();
         _formKey.currentState?.reset();
         _fullPhoneNumber = null;
-        setState(() {
-          _isPhoneSelected = _tabController.index == 0;
-        });
+        if (mounted) {
+          setState(() {
+            _isPhoneSelected = _tabController.index == 0;
+          });
+        }
       }
     });
   }
@@ -51,8 +49,9 @@ class _ForgotPasswordWidgetState extends State<ForgotPasswordWidget>
     super.dispose();
   }
 
-  void _dispatchRequestLinkEvent() {
+  void _handleForgotPassword() {
     if (_formKey.currentState!.validate()) {
+      setState(() => _isLoading = true);
       String loginId;
       if (_isPhoneSelected) {
         if (_fullPhoneNumber == null || _fullPhoneNumber!.isEmpty) {
@@ -62,6 +61,7 @@ class _ForgotPasswordWidgetState extends State<ForgotPasswordWidget>
               backgroundColor: Colors.red,
             ),
           );
+          setState(() => _isLoading = false);
           return;
         }
         loginId = _fullPhoneNumber!;
@@ -69,7 +69,19 @@ class _ForgotPasswordWidgetState extends State<ForgotPasswordWidget>
         loginId = _emailController.text.trim();
       }
 
-      context.read<PasswordResetBloc>().add(RequestResetLink(loginId: loginId));
+      // Simulate a network call
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Password reset instructions sent successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          context.push('/resetPassword', extra: {'loginId': loginId});
+        }
+      });
     }
   }
 
@@ -92,196 +104,153 @@ class _ForgotPasswordWidgetState extends State<ForgotPasswordWidget>
           onPressed: () => context.pop(),
         ),
       ),
-      body: BlocListener<PasswordResetBloc, PasswordResetState>(
-        listener: (context, state) {
-          if (state is PasswordResetLoading) {
-            setState(() {
-              _isLoading = true;
-            });
-          } else if (state is PasswordResetLinkSent) {
-            setState(() {
-              _isLoading = false;
-            });
-
-            final loginId = _isPhoneSelected
-                ? _fullPhoneNumber!
-                : _emailController.text.trim();
-
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Password reset instructions sent successfully!'),
-                backgroundColor: Colors.green,
-              ),
-            );
-
-            context.push('/resetPassword', extra: {'loginId': loginId});
-          } else if (state is PasswordResetFailure) {
-            setState(() {
-              _isLoading = false;
-            });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.failure.message),
-                backgroundColor: Colors.red,
-              ),
-            );
-          } else {
-            if (mounted && _isLoading) {
-              setState(() {
-                _isLoading = false;
-              });
-            }
-          }
-        },
-        child: SafeArea(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 40),
-                    Icon(
-                      Icons.lock_reset_outlined,
-                      size: 80,
-                      color: primaryColor,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 40),
+                  Icon(
+                    Icons.lock_reset_outlined,
+                    size: 80,
+                    color: primaryColor,
+                  ),
+                  const SizedBox(height: 30),
+                  Text(
+                    'Reset Your Password',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Poppins',
+                      color: FlutterFlowTheme.of(context).primary,
                     ),
-                    const SizedBox(height: 30),
-                    Text(
-                      'Reset Your Password',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Poppins',
-                        color: FlutterFlowTheme.of(context).primary,
-                      ),
-                      textAlign: TextAlign.center,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Select Email or Phone Number to receive your password reset instructions.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black54,
+                      fontFamily: 'Poppins',
+                      height: 1.4,
                     ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Select Email or Phone Number to receive your password reset instructions.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.black54,
-                        fontFamily: 'Poppins',
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              _tabController.animateTo(0);
-                            },
-                            child: Container(
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: _tabController.index == 0
-                                    ? FlutterFlowTheme.of(context).primary
-                                    : Colors.grey.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  "Phone Number",
-                                  style: TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontWeight: FontWeight.w600,
-                                    color: _tabController.index == 0
-                                        ? Colors.white
-                                        : Colors.grey,
-                                  ),
-                                ),
-                              ),
+                  ),
+                  const SizedBox(height: 30),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            _tabController.animateTo(0);
+                          },
+                          child: Container(
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: _tabController.index == 0
+                                  ? FlutterFlowTheme.of(context).primary
+                                  : Colors.grey.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              _tabController.animateTo(1);
-                            },
-                            child: Container(
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: _tabController.index == 1
-                                    ? FlutterFlowTheme.of(context).primary
-                                    : Colors.grey.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  "Email",
-                                  style: TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontWeight: FontWeight.w600,
-                                    color: _tabController.index == 1
-                                        ? Colors.white
-                                        : Colors.grey,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 30),
-                    _isPhoneSelected
-                        ? _buildPhoneField(context)
-                        : _buildEmailField(context),
-                    const SizedBox(height: 40),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 55,
-                      child: ElevatedButton(
-                        onPressed:
-                            _isLoading ? null : _dispatchRequestLinkEvent,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryColor,
-                          foregroundColor: Colors.white,
-                          disabledBackgroundColor: Colors.grey,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 3,
-                                ),
-                              )
-                            : const Text(
-                                'Send Instructions',
+                            child: Center(
+                              child: Text(
+                                "Phone Number",
                                 style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
                                   fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w600,
+                                  color: _tabController.index == 0
+                                      ? Colors.white
+                                      : Colors.grey,
                                 ),
                               ),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 30),
-                    Container(
-                      width: 60,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0A1C40),
-                        borderRadius: BorderRadius.circular(2),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            _tabController.animateTo(1);
+                          },
+                          child: Container(
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: _tabController.index == 1
+                                  ? FlutterFlowTheme.of(context).primary
+                                  : Colors.grey.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Center(
+                              child: Text(
+                                "Email",
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w600,
+                                  color: _tabController.index == 1
+                                      ? Colors.white
+                                      : Colors.grey,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 30),
+                  _isPhoneSelected
+                      ? _buildPhoneField(context)
+                      : _buildEmailField(context),
+                  const SizedBox(height: 40),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 55,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _handleForgotPassword,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: Colors.grey,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 3,
+                              ),
+                            )
+                          : const Text(
+                              'Send Instructions',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'Poppins',
+                              ),
+                            ),
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 30),
+                  Container(
+                    width: 60,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0A1C40),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

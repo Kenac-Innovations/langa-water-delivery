@@ -1,11 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:langas_driver/bloc/auth/auth_bloc/auth_bloc_bloc.dart';
-import 'package:langas_driver/bloc/auth/auth_bloc/auth_bloc_state.dart';
-import 'package:langas_driver/bloc/driver_profile/driver_profile_bloc_bloc.dart';
-import 'package:langas_driver/bloc/driver_profile/driver_profile_bloc_event.dart';
-import 'package:langas_driver/bloc/driver_profile/driver_profile_bloc_state.dart';
 import 'package:langas_driver/flutter_flow/flutter_flow_theme.dart';
 import 'package:langas_driver/flutter_flow/flutter_flow_widgets.dart';
 import 'package:langas_driver/models/auth_models.dart';
@@ -21,60 +15,53 @@ class DriverProfileScreen extends StatefulWidget {
 }
 
 class _DriverProfileScreenState extends State<DriverProfileScreen> {
-  String? _driverId;
-
-  @override
-  void initState() {
-    super.initState();
-    final authState = context.read<AuthBloc>().state;
-
-    if (authState is AuthDriverAuthenticated) {
-      _driverId = authState.authData.driverProfile?.id.toString() ??
-          authState.authData.userID.toString();
-      // if (_driverId != null && _driverId!.isNotEmpty) {
-      //   context
-      //       .read<DriverProfileBloc>()
-      //       .add(LoadDriverProfile(driverId: _driverId!));
-      // }
-    } else {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text("User not authenticated or Driver ID missing."),
-              backgroundColor: Colors.red),
-        );
-        if (context.canPop())
-          context.pop();
-        else
-          context.go('/loginPage');
-      });
-    }
-  }
+  // Hardcoded sample data for the driver profile
+  final DriverProfile _driverProfile = const DriverProfile(
+    id: 1,
+    firstname: 'John',
+    lastname: 'Doe',
+    gender: 'Male',
+    mobileNumber: '+263 777 123 456',
+    email: 'john.doe.driver@watertransporter.com',
+    address: '123 Samora Machel Ave, Harare',
+    nationalIdNo: '63-1234567-A01',
+    driverLicenseNo: 'D1234567',
+    approvalStatus: 'APPROVED',
+    approvedBy: 'Admin',
+    dateApproved: '2023-10-26T10:00:00Z',
+    profilePhotoUrl: 'https://placehold.co/200x200/2451DC/FFFFFF?text=JD',
+    userId: 101,
+    walletId: 501,
+    activeVehicle: Vehicle(
+      vehicleId: 2,
+      vehicleModel: 'Canter',
+      vehicleColor: 'Blue',
+      vehicleMake: 'Mitsubishi',
+      licensePlateNo: 'ACF 5678',
+      active: true,
+      vehicleType: VehicleType.TRUCK,
+      vehicleStatus: VehicleStatus.APPROVED,
+    ),
+    rating: 4.8,
+    walletBalance: 75.50,
+    onlineStatus: true,
+    isBusy: false,
+    numberOfDeliveries: 42,
+  );
 
   void _confirmDeleteAccount() {
-    if (_driverId == null) return;
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: const Text('Delete Account'),
           content: const Text(
-              'Are you sure you want to delete your account? This action cannot be undone.'),
+              'This is a static page. The delete functionality is disabled.'),
           actions: <Widget>[
             TextButton(
-              child: const Text('Cancel'),
+              child: const Text('OK'),
               onPressed: () {
                 Navigator.of(dialogContext).pop();
-              },
-            ),
-            TextButton(
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete'),
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                context
-                    .read<DriverProfileBloc>()
-                    .add(DeleteDriverProfile(driverId: _driverId!));
               },
             ),
           ],
@@ -108,72 +95,15 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: () {
-              if (_driverId != null && _driverId!.isNotEmpty) {
-                context
-                    .read<DriverProfileBloc>()
-                    .add(LoadDriverProfile(driverId: _driverId!));
-              }
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("This is a static page.")),
+              );
             },
           ),
         ],
       ),
       backgroundColor: theme.secondaryBackground,
-      body: BlocConsumer<DriverProfileBloc, DriverProfileState>(
-        listener: (context, state) {
-          if (state is DriverProfileDeleteSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                  content: Text(state.message), backgroundColor: Colors.green),
-            );
-          } else if (state is DriverProfileDeleteFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                  content: Text(
-                      "Failed to delete profile: ${state.failure.message}"),
-                  backgroundColor: Colors.red),
-            );
-          }
-        },
-        builder: (context, state) {
-          final authState = context.read<AuthBloc>().state;
-          if (state is DriverProfileLoading ||
-              state is DriverProfileDeleteInProgress) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (state is DriverProfileLoadSuccess) {
-            return _buildProfileView(context, theme, state.driverProfile);
-          } else if (state is DriverProfileLoadFailure) {
-            return Center(
-                child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text('Failed to load profile: ${state.failure.message}'),
-                const SizedBox(height: 10),
-                ElevatedButton(
-                  onPressed: () {
-                    if (_driverId != null && _driverId!.isNotEmpty) {
-                      context
-                          .read<DriverProfileBloc>()
-                          .add(LoadDriverProfile(driverId: _driverId!));
-                    }
-                  },
-                  child: const Text('Retry'),
-                )
-              ],
-            ));
-          } else {
-            return Center(
-                child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                _driverId == null
-                    ? 'Driver ID not found. Unable to load profile.'
-                    : 'Profile data not available. Please try refreshing.',
-                textAlign: TextAlign.center,
-              ),
-            ));
-          }
-        },
-      ),
+      body: _buildProfileView(context, theme, _driverProfile),
     );
   }
 
@@ -181,11 +111,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
       BuildContext context, FlutterFlowTheme theme, DriverProfile profile) {
     return RefreshIndicator(
       onRefresh: () async {
-        if (_driverId != null && _driverId!.isNotEmpty) {
-          context
-              .read<DriverProfileBloc>()
-              .add(LoadDriverProfile(driverId: _driverId!));
-        }
+        // No action needed for a static page
       },
       child: ListView(
         padding: const EdgeInsets.all(0),
