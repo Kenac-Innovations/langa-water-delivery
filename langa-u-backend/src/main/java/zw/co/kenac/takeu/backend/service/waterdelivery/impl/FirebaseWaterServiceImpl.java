@@ -15,8 +15,10 @@ import zw.co.kenac.takeu.backend.model.DeliveryEntity;
 import zw.co.kenac.takeu.backend.model.enumeration.DeliveryStatus;
 import zw.co.kenac.takeu.backend.model.enumeration.GenericStatus;
 import zw.co.kenac.takeu.backend.model.enumeration.TransactionStatus;
+import zw.co.kenac.takeu.backend.model.waterdelivery.DispatchSettings;
 import zw.co.kenac.takeu.backend.model.waterdelivery.WaterDelivery;
 import zw.co.kenac.takeu.backend.repository.DeliveryRepository;
+import zw.co.kenac.takeu.backend.repository.DispatchSettingsRepository;
 import zw.co.kenac.takeu.backend.service.internal.FirebaseService;
 import zw.co.kenac.takeu.backend.service.waterdelivery.FirebaseWaterService;
 import zw.co.kenac.takeu.backend.walletmodule.dto.CreateFirebaseTransactionDTO;
@@ -35,7 +37,17 @@ public class FirebaseWaterServiceImpl implements FirebaseWaterService {
     private final ApplicationEventPublisher eventPublisher;
     private final DeliveryRepository deliveryRepository;
     private final String OPENDELIVERY = "opendelivery";
+    private final DispatchSettingsRepository dispatchSettingsRepository;
 
+
+
+    private boolean isAutoDispatchEnabled() {
+        List<DispatchSettings> settingsList = dispatchSettingsRepository.findAll();
+        if (settingsList.isEmpty()) {
+            return false; // Default to false
+        }
+        return settingsList.get(0).isStatus();
+    }
     @Override
     public void createTransaction(CreateFirebaseTransactionDTO transaction) {
         try {
@@ -85,9 +97,10 @@ public class FirebaseWaterServiceImpl implements FirebaseWaterService {
             deliveryData.put("priceAmount", delivery.getPriceAmount().toString());
             deliveryData.put("autoAssignDriver", delivery.getAutoAssignDriver());
             deliveryData.put("isScheduled", delivery.getIsScheduled());
-            deliveryData.put("waterQuantityLitres", delivery.getWaterLitreQuantity().toString());
+            deliveryData.put("quantity", delivery.getWaterLitreQuantity().toString());
             deliveryData.put("deliveryInstructions", delivery.getDeliveryInstructions());
             deliveryData.put("deliveryStatus", delivery.getDeliveryStatus());
+            deliveryData.put("autoDispatch", isAutoDispatchEnabled());
             deliveryData.put("commissionRequired", delivery.getCommissionRequired() != null ?
                     delivery.getCommissionRequired().toString() : "0");
             deliveryData.put("createdAt", LocalDateTime.now().toString());
@@ -207,28 +220,17 @@ public class FirebaseWaterServiceImpl implements FirebaseWaterService {
     }
 
     @Override
-    public void deleteDelivery(Long deliveryId, String vehicleType) {
+    public void deleteDelivery(Long deliveryId) {
         try {
-            // Determine the bucket based on vehicle type
-            String bucketName = "openDeliveries";
-            if (vehicleType != null) {
-                if (vehicleType.equalsIgnoreCase("BIKE")) {
-                    bucketName = "openDeliveryBikes";
-                } else if (vehicleType.equalsIgnoreCase("CAR")) {
-                    bucketName = "openDeliveryCars";
-                }
-            }
-
-            DatabaseReference deliveriesRef = firebaseDatabase.getReference(bucketName);
+            DatabaseReference deliveriesRef = firebaseDatabase.getReference(OPENDELIVERY);
             DatabaseReference deliveryRef = deliveriesRef.child(String.valueOf(deliveryId));
 
-            String finalBucketName = bucketName;
             deliveryRef.removeValue((error, ref) -> {
                 if (error != null) {
                     log.error("Failed to delete delivery from Firebase: {}", error.getMessage());
                 } else {
                     log.info("Successfully deleted delivery from Firebase with ID: {} from bucket: {}",
-                            deliveryId, finalBucketName);
+                            deliveryId, OPENDELIVERY);
                 }
             });
         } catch (Exception e) {

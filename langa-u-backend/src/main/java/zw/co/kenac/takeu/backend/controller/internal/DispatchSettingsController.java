@@ -11,7 +11,7 @@ import zw.co.kenac.takeu.backend.dto.waterdelivery.request.DispatchSettingsReque
 import zw.co.kenac.takeu.backend.model.waterdelivery.DispatchSettings;
 
 
-@RequestMapping("${custom.base.path}/dispatch-settings")
+@RequestMapping("api/v2/dispatch-settings")
 @Tag(name = "Dispatch Settings Management")
 public interface DispatchSettingsController {
 

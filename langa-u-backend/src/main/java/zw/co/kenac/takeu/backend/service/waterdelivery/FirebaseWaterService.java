@@ -12,7 +12,7 @@ public interface FirebaseWaterService {
     void updateTransactionStatus(String transactionId, TransactionStatus status, String narration);
     void createTransaction(CreateFirebaseTransactionDTO transaction);
     void createDelivery(WaterDelivery deliveryResponse);
-    void deleteDelivery(Long deliveryId,String vehicleType);
+    void deleteDelivery(Long deliveryId);
     void createDriverDeliveryProposal(DriverDeliveryProposalDto proposal);
     void updateDeliveryProposalStatuses(Long deliveryId, Long acceptedProposalId, String acceptedStatus, String declinedStatus);
     void deleteDriverDeliveryProposal(Long deliveryId);

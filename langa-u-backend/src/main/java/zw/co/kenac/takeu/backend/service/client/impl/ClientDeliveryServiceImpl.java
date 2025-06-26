@@ -12,10 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import zw.co.kenac.takeu.backend.dto.*;
 import zw.co.kenac.takeu.backend.dto.client.*;
 import zw.co.kenac.takeu.backend.dto.driver.DriverDeliveryResponse;
-import zw.co.kenac.takeu.backend.event.deliveryEvents.ClientDeliveryCancelEvent;
-import zw.co.kenac.takeu.backend.event.deliveryEvents.DeliveryCreatedEvent;
-import zw.co.kenac.takeu.backend.event.deliveryEvents.DeliveryDeleteEvent;
-import zw.co.kenac.takeu.backend.event.deliveryEvents.DriverAcceptedEvent;
+import zw.co.kenac.takeu.backend.event.deliveryEvents.*;
 import zw.co.kenac.takeu.backend.exception.custom.ResourceNotFoundException;
 import zw.co.kenac.takeu.backend.model.*;
 import zw.co.kenac.takeu.backend.model.embedded.DropOffLocation;
@@ -23,10 +20,8 @@ import zw.co.kenac.takeu.backend.model.embedded.PickupLocation;
 import zw.co.kenac.takeu.backend.model.enumeration.DeliveryStatus;
 import zw.co.kenac.takeu.backend.model.enumeration.DriverProposalStatus;
 import zw.co.kenac.takeu.backend.model.enumeration.PaymentMethod;
-import zw.co.kenac.takeu.backend.repository.AvailableDriverRepository;
-import zw.co.kenac.takeu.backend.repository.ClientRepository;
-import zw.co.kenac.takeu.backend.repository.DeliveryRepository;
-import zw.co.kenac.takeu.backend.repository.DriverRepository;
+import zw.co.kenac.takeu.backend.model.waterdelivery.WaterDelivery;
+import zw.co.kenac.takeu.backend.repository.*;
 import zw.co.kenac.takeu.backend.service.client.ClientDeliveryService;
 import zw.co.kenac.takeu.backend.service.internal.CommissionService;
 import zw.co.kenac.takeu.backend.walletmodule.dto.CreateTxnDTO;
@@ -55,6 +50,7 @@ public class ClientDeliveryServiceImpl implements ClientDeliveryService {
     private final AvailableDriverRepository availableDriverRepository;
     private final CurrenciesRepo currenciesRepo;
     private final TransactionService transactionService;
+    private final WaterDeliveryRepository waterDeliveryRepository;
     private final TransactionRepo transactionRepo;
     private final CommissionService commissionService;
     private final ApplicationEventPublisher eventPublisher;
@@ -161,67 +157,13 @@ public class ClientDeliveryServiceImpl implements ClientDeliveryService {
         return "Delivery deleted successfully.";
     }
 
-    //    @Override
-//    public String selectDeliveryDriver(Long clientId, SelectDriverRequest request) {
-//        log.info(" ======> This is the incoming request {}", request);
-//        List<AvailableDriverEntity> response = availableDriverRepository.checkIfDriverHasOpenProposalForDelivery(request.driverId(), request.deliveryId());
-//        log.info("=======> response: {}", response);
-//
-//        DeliveryEntity delivery = deliveryRepository.findById(request.deliveryId()).orElseThrow(() -> new ResourceNotFoundException(NOT_FOUND));
-//        DriverEntity driver = driverRepository.findById(request.driverId()).orElseThrow(() -> new ResourceNotFoundException(NOT_FOUND));
-//
-//        // First assign the delivery to driver and mark proposals
-//        AvailableDriverEntity availableDriver = assignDeliveryToDriverMarking(delivery.getEntityId(), driver.getEntityId());
-//        if(!delivery.getIsScheduled()){
-//            driver.setIsBusy(true);
-//        }
-//
-//        // Then update delivery details
-//        delivery.setDriver(driver);
-//        delivery.setVehicle(driver.findActiveVehicle());
-//        delivery.setDeliveryStatus(DeliveryStatus.ASSIGNED.name());
-//
-//        // Create the transaction
-//        Currencies currencies = currenciesRepo.findByName(delivery.getPayment().getCurrency()).orElse(Currencies.builder()
-//                .id(1L).name("USD").build());// todo hard coded make sure to change
-//
-//        CreateTxnDTO transaction = CreateTxnDTO.builder()
-//                .clientId(delivery.getEntityId())
-//                .driverId(driver.getEntityId())
-//                .calculatedCommission(delivery.getCommissionRequired())
-//                .deliveryId(delivery.getEntityId())
-//                .principal(delivery.getPriceAmount())
-//                .paymentMethod(PaymentMethod.valueOf(delivery.getPayment().getPaymentMethod()))
-//                .currencyId(currencies.getId())
-//                .build();
-//
-//        TransactionDto txn = transactionService.createTransaction(transaction);
-//        Transaction transaction1 = transactionRepo.findById(txn.getId()).orElseThrow(() -> new ResourceNotFoundException(NOT_FOUND));
-//        delivery.setTransaction(transaction1);
-//        log.info("========> Delivery Created transaction: {}", txn);
-//
-//        deliveryRepository.save(delivery);
-//
-//        // Publish events
-//        eventPublisher.publishEvent(new DeliveryDeleteEvent(this, delivery.getEntityId(), delivery.getVehicleType()));
-//        eventPublisher.publishEvent(new DriverAcceptedEvent(this, availableDriver));
-//
-//        return "Delivery has been assigned to driver successfully.";
-//    }
     @Override
     public String selectDeliveryDriver(Long clientId, SelectDriverRequest request) {
         log.info(" ======> This is the incoming request {}", request);
-//        List<AvailableDriverEntity> response = availableDriverRepository.checkIfDriverHasOpenProposalForDelivery(request.driverId(), request.deliveryId());
-//        log.info("=======> response: {}", response);
 
-        DeliveryEntity delivery = deliveryRepository.findById(request.deliveryId()).orElseThrow(() -> new ResourceNotFoundException(NOT_FOUND));
+
+        WaterDelivery delivery = waterDeliveryRepository.findById(request.deliveryId()).orElseThrow(() -> new ResourceNotFoundException(NOT_FOUND));
         DriverEntity driver = driverRepository.findById(request.driverId()).orElseThrow(() -> new ResourceNotFoundException(NOT_FOUND));
-
-        // First assign the delivery to driver and mark proposals
-//        AvailableDriverEntity availableDriver = assignDeliveryToDriverMarking(delivery.getEntityId(), driver.getEntityId());
-//        if(!delivery.getIsScheduled()){
-//            driver.setIsBusy(true);
-//        }
 
         driver.setIsBusy(true);
         // Then update delivery details
@@ -229,31 +171,10 @@ public class ClientDeliveryServiceImpl implements ClientDeliveryService {
         delivery.setVehicle(driver.findActiveVehicle());
         delivery.setDeliveryStatus(DeliveryStatus.ASSIGNED.name());
 
-        // Create the transaction
-        Currencies currencies = currenciesRepo.findByName(delivery.getPayment().getCurrency()).orElse(Currencies.builder()
-                .id(1L).name("USD").build());// todo hard coded make sure to change
-
-        CreateTxnDTO transaction = CreateTxnDTO.builder()
-                .clientId(delivery.getEntityId())
-                .driverId(driver.getEntityId())
-                .calculatedCommission(delivery.getCommissionRequired())
-                .deliveryId(delivery.getEntityId())
-                .principal(delivery.getPriceAmount())
-                .paymentMethod(PaymentMethod.valueOf(delivery.getPayment().getPaymentMethod()))
-                .currencyId(currencies.getId())
-                .build();
-
-        TransactionDto txn = transactionService.createTransaction(transaction);
-        Transaction transaction1 = transactionRepo.findById(txn.getId()).orElseThrow(() -> new ResourceNotFoundException(NOT_FOUND));
-        delivery.setTransaction(transaction1);
-        log.info("========> Delivery Created transaction: {}", txn);
-
-        deliveryRepository.save(delivery);
+        waterDeliveryRepository.save(delivery);
 
         // Publish events
-        eventPublisher.publishEvent(new DeliveryDeleteEvent(this, delivery.getEntityId(), delivery.getVehicleType()));
-        //eventPublisher.publishEvent(new DriverAcceptedEvent(this, availableDriver));
-
+        eventPublisher.publishEvent(new WaterDeliveryDeleteEvent(this, delivery.getEntityId()));
         return "Delivery has been assigned to driver successfully.";
     }
 
